@@ -1,6 +1,6 @@
 {
   "name": "minsto",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "description": "A mini store for javascript/React app",
   "main": "dist/index.js",
   "types": "src/index.d.ts",

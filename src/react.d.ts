@@ -1,13 +1,13 @@
-import { Store, StoreStateInfer } from "./index";
+import { Store, ModelStateInfer } from "./index";
 
 declare const useStore: UseStore;
 
 export default useStore;
 
 export interface UseStore extends Function {
-  <TModel>(store: Store<TModel>): StoreStateInfer<TModel>;
+  <TModel>(store: Store<TModel>): ModelStateInfer<TModel>;
   <TModel, TResult>(
     store: Store<TModel>,
-    selector: (state: StoreStateInfer<TModel>) => TResult
+    selector: (store: Store<TModel>) => TResult
   ): TResult;
 }

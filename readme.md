@@ -8,10 +8,12 @@ A mini store for javascript/React app
 import minsto from "minsto";
 import useStore from "minsto/react";
 
-const store = minsto({ count: 0 });
+const CounterStore = minsto({ count: 0 });
 
 const App = () => (
-  <h1 onClick={() => store.count++}>{useStore(store).count}</h1>
+  <h1 onClick={() => CounterStore.count++}>
+    {useStore(CounterStore, (store) => store.count)}
+  </h1>
 );
 ```
 

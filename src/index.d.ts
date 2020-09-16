@@ -1,84 +1,125 @@
-export default function minsto<TModel>(model?: TModel): Store<TModel>;
+export default function minsto<TModel extends StoreModel = any>(
+  model?: TModel
+): Store<TModel>;
 
-export type Store<TModel> = StoreBase<TModel> & StorePropsInfer<TModel>;
+export type Store<TModel = any> = ModelBaseInfer<TModel> &
+  ModelPluginsInfer<TModel> &
+  StoreBase<TModel>;
 
-export type StorePropsInfer<TModel> = StoreMainPropsInfer<
-  Omit<TModel, "$computed">
-> &
-  StoreExtraPropsInfer<TModel>;
+export type Plugin<TModel = any> = ModelBaseInfer<TModel>;
 
-export type StoreExtraPropsInfer<TModel> = TModel extends {
-  $computed: infer TComputed;
+export type ModelBaseInfer<TModel> = ModelActionsInfer<TModel> &
+  ModelStateInfer<TModel> &
+  ModelComputedInfer<TModel>;
+
+export interface StoreModel extends ModelBase {
+  init?(store?: any): any;
+  plugins?: {};
 }
-  ? { [key in keyof TComputed]: any }
-  : {};
 
-export type StoreStateInfer<TModel> = {
-  [key in keyof TModel]: StoreStatePropInfer<TModel[key]>;
-} &
-  StoreExtraPropsInfer<TModel>;
+export interface StoreBase<TModel> {
+  onChange(listener: Listener<StateChangeEventArgs<TModel>>): Unsubscribe;
+  onDispatch(listener: Listener<DispatchEventArgs<TModel>>): Unsubscribe;
 
-export type StoreStatePropInfer<T> = T extends (...args: any[]) => any
-  ? never
-  : T;
-
-export interface StoreBase<TModel = any> {
+  when<TPayload>(action: string | (Action | string)[]): Promise<TPayload>;
+  when(
+    action: string | (Action | string)[],
+    callback: Listener<DispatchEventArgs<TModel>>
+  ): Unsubscribe;
+  when(listeners: {
+    [key: string]: Listener<DispatchEventArgs<TModel>>;
+  }): Unsubscribe;
+  watch(
+    prop: string,
+    callback: Listener<ValueChangeEventArgs<TModel, any>>
+  ): Unsubscribe;
+  watch(
+    props: string[],
+    callback: Listener<ValueChangeEventArgs<TModel, { [key: string]: any }>>
+  ): Unsubscribe;
+  watch<TResult>(
+    selector: (state: ModelStateInfer<TModel>) => TResult,
+    callback: Listener<ValueChangeEventArgs<TModel, TResult>>
+  ): Unsubscribe;
+  getState(): ModelStateInfer<TModel>;
   dispatch<TPayload, TResult>(
     action: Action<TModel, TPayload, TResult>,
     payload?: TPayload
   ): TResult;
-  subscribe(
-    subscription: (args: {
-      store: Store<TModel>;
-      state: StoreStateInfer<TModel>;
-    }) => any
-  ): Unsubscribe;
-  getState(): StoreStateInfer<TModel>;
-  when(actionName: "*" | string): Promise<any>;
-  when<TPayload, TResult>(
-    action: Action<TModel, TPayload, TResult>
-  ): Promise<any>;
-  when<TAction extends Action<TModel>>(
-    action: TAction,
-    callback: (args: { store: Store<TModel>; action: TAction }) => any
-  ): Unsubscribe;
-  when(
-    actionName: "*" | string,
-    callback: (args: { store: Store<TModel>; action: Function }) => any
-  ): Unsubscribe;
-  use<TPlugin>(
-    plugin: TPlugin | ((plugin?: any) => TPlugin)
-  ): Store<TModel & TPlugin>;
-  use<TPlugin, TKey extends string>(
-    name: TKey,
-    plugin: TPlugin | ((plugin?: any) => TPlugin)
-  ): Store<TModel> & { [key in TKey]: StorePropsInfer<TPlugin> };
-  watch<T = any>(
-    selector: (state: StoreStateInfer<TModel>) => T,
-    callback: (args?: {
-      value: T;
-      state: StoreStateInfer<TModel>;
-      store: Store<TModel>;
-    }) => any
-  ): Unsubscribe;
+  dynamic(prop: string): any;
+  dynamic(prop: string, value: any): void;
 }
 
-export type Plugin<TModel = any> = StorePropsInfer<TModel>;
+export interface StateChangeEventArgs<TModel> {
+  target: Store<TModel> | Plugin<TModel>;
+  state: ModelStateInfer<TModel>;
+}
 
-export type Action<TModel, TPayload = any, TResult = any> = (
+export interface ValueChangeEventArgs<TModel, TValue>
+  extends StateChangeEventArgs<TModel> {
+  previous: TValue;
+  current: TValue;
+}
+
+export interface DispatchEventArgs<TModel, TPayload = any> {
+  type: string;
+  target: Store<TModel> | Plugin<TModel>;
+  payload: TPayload;
+}
+
+export type Unsubscribe = () => void;
+
+export interface PluginModel extends ModelBase {
+  init?(plugin?: any, store?: any): any;
+}
+
+export interface ModelBase {
+  state?: {};
+  computed?: {};
+  actions?: {};
+  listeners?: {
+    [key: string]: Listener;
+  };
+}
+
+export type Action<TModel = any, TPayload = any, TResult = void> = (
   store?: Store<TModel>,
   payload?: TPayload
 ) => TResult;
 
-export type Unsubscribe = () => void;
+export type ActionBody<TModel, TPayload, TResult> = (
+  store?: Store<TModel>,
+  payload?: TPayload
+) => TResult;
 
-export type StoreMainPropsInfer<TModel> = {
-  [key in keyof TModel]: StorePropInfer<TModel, TModel[key]>;
-};
+export type ModelActionsInfer<TModel> = TModel extends {
+  actions: infer TActions;
+}
+  ? { [key in keyof TActions]: ActionDispatcherInfer<TActions[key]> }
+  : {};
 
-export type StorePropInfer<TModel, TPropType> = TPropType extends (
-  store: Store<TModel>,
-  ...args: infer TArgs
-) => infer TResult
-  ? (...args: TArgs) => TResult
-  : TPropType;
+export type ModelStateInfer<TModel> = TModel extends { state: infer TState }
+  ? { [key in keyof TState]: TState[key] }
+  : {};
+
+export type ActionDispatcherInfer<TAction> = TAction extends Action<
+  any,
+  infer TPayload,
+  infer TResult
+>
+  ? (payload?: TPayload) => TResult
+  : never;
+
+export type ModelComputedInfer<TModel> = TModel extends {
+  state: infer TComputed;
+}
+  ? { [key in keyof TComputed]: any }
+  : {};
+
+export type ModelPluginsInfer<TModel> = TModel extends {
+  plugins: infer TPlugins;
+}
+  ? { [key in keyof TPlugins]: Plugin<TPlugins[key]> }
+  : {};
+
+export type Listener<T = any> = (args: T) => any;

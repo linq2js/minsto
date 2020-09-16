@@ -1,69 +1,59 @@
-import minsto, { Store, Plugin } from "./index";
-import useStore from "./react";
+import minsto, { Action, StoreModel } from "./index";
+import task from "./task";
 
-interface State {
-  count: number;
-}
-
-function Decrease(store: Store<State>) {
-  store.dispatch(Decrease);
-  return 200;
-}
-
-const store = minsto({
-  $computed: {
-    name: "aaa",
-  },
-  count: 0,
-  increase(store: Store<State>, a: number, b: number): number {
-    console.log(store, a, b);
-    return 100;
-  },
-});
-
-function createLogPlugin<TLogName extends string, TLogAction extends string>(
-  logPropName: TLogName,
-  logActionName: TLogAction
-): { [key in TLogName]: string[] } &
-  { [key in TLogAction]: (data: string) => void } {
-  console.log(logActionName, logPropName);
-  return undefined;
-}
-
-interface CounterModel {
-  count: number;
-  increase(store: Store<CounterModel>): void;
-  decrease(store: Store<CounterModel>): void;
-}
-
-function CounterPlugin(plugin: Plugin<CounterModel>) {
-  return {
-    count: 0,
-    $computed: {
-      double: () => plugin.count * 2,
-    },
-    increase() {},
-    decrease() {
-      plugin.count--;
-    },
+interface TodoStoreModel extends StoreModel {
+  state: {
+    count: number;
+  };
+  actions: {
+    increase: Action<TodoStoreModel>;
   };
 }
 
-const s1 = minsto().use("counter", CounterPlugin);
+interface HistoryPluginModel<TEntry = any> {
+  state: {
+    current: TEntry;
+  };
 
-console.log(s1.counter.count, s1.counter.increase());
-
-const logPlugin = createLogPlugin("ac", "log");
-logPlugin.ac.push("");
-logPlugin.log("");
-
-store.when("*");
-store.when("*", (args) => console.log(args.action));
-
-const r = store.dispatch(Decrease);
-
-function MyComp() {
-  return useStore(store, (state) => [state.count, state.name]);
+  actions: {
+    back(): void;
+    forward(): void;
+    go(store: any, number: number): void;
+  };
 }
 
-console.log(store.increase, store.increase(1, 2), r, MyComp, store.name);
+const store = minsto({
+  state: {
+    count: 0
+  },
+  actions: {
+    increase(store, payload) {}
+  },
+  plugins: {
+    history: undefined as HistoryPluginModel
+  },
+  listeners: {
+    click(args) {}
+  }
+});
+
+const f1 = task((a: number, b: string) => a + b, { latest: true });
+const f2 = task((a: number, b: string) => (t) => a + b, { latest: true });
+const f3 = task((a: number, b: string) => Promise.resolve(a + b), {
+  latest: true
+});
+const f4 = task((a: number, b: string) => (t) => Promise.resolve(a + b), {
+  latest: true
+});
+
+console.log(
+  f1(1, "a"),
+  f2(1, "a"),
+  f3(1, "a"),
+  f4(1, "a"),
+  store.increase(100),
+  store.count,
+  store.history.current,
+  store.history.go(1),
+  store.when("11")
+);

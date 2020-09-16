@@ -1,38 +1,43 @@
 import minsto from "../index";
 
-const CounterPlugin = (plugin) => {
+function createHistoryPlugin(props) {
   return {
-    count: 1,
-    logs: 0,
-    $computed: {
-      _count: () => plugin.count,
-      double: ["_count", (count) => count * 2],
+    state: {
+      current: undefined,
+      entries: []
     },
-    increase() {
-      plugin.count++;
+    init(store, parentStore) {
+      parentStore.watch(props, (args) => {
+        store.push(args.current);
+      });
     },
-    decrease() {
-      plugin.count--;
-    },
-    init(store) {
-      store.when(plugin.increase, () => plugin.logs++);
-    },
+    actions: {
+      push(store, entry) {
+        store.entries = store.entries.concat(entry);
+        store.current = entry;
+      }
+    }
   };
-};
+}
 
-test("basic plugin", () => {
-  const store = minsto().use(CounterPlugin);
-  expect(store.count).toBe(1);
-  store.increase();
-  expect(store.count).toBe(2);
-  expect(store.double).toBe(4);
-  expect(store.logs).toBe(1);
-});
+test("history", () => {
+  const store = minsto({
+    state: { v1: 1, v2: 2, v3: 3 },
+    plugins: {
+      history: createHistoryPlugin(["v1", "v2"])
+    }
+  });
 
-test("named plugin", () => {
-  const store = minsto().use("counter", CounterPlugin);
-  expect(store.counter.count).toBe(1);
-  store.counter.increase();
-  expect(store.counter.count).toBe(2);
-  expect(store.counter.double).toBe(4);
+  expect(store.history.current).toBeUndefined();
+
+  store.v1++;
+  expect(store.history.current).toEqual({ v1: 2, v2: 2 });
+  expect(store.history.entries).toEqual([{ v1: 2, v2: 2 }]);
+
+  store.v2++;
+  expect(store.history.current).toEqual({ v1: 2, v2: 3 });
+  expect(store.history.entries).toEqual([
+    { v1: 2, v2: 2 },
+    { v1: 2, v2: 3 }
+  ]);
 });
