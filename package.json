@@ -1,6 +1,6 @@
 {
   "name": "minsto",
-  "version": "0.0.0",
+  "version": "0.0.3",
   "description": "A mini store for javascript/React app",
   "main": "dist/index.js",
   "types": "src/index.d.ts",
@@ -11,7 +11,9 @@
   },
   "files": [
     "dist",
-    "react"
+    "react",
+    "src/index.d.ts",
+    "src/react.d.ts"
   ],
   "bugs": {
     "url": "https://github.com/linq2js/minsto/issues"

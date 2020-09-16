@@ -1,34 +1,56 @@
-import { useRef, useState, useLayoutEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import isEqual from "./isEqual";
-import isPromiseLike from "./isPromiseLike";
 
-const defaultSelector = (state) => state;
-
-export default function useStore(store, selector = defaultSelector) {
+export default function useStore(store, selector) {
+  if (typeof selector === "string") {
+    const prop = selector;
+    selector = (state) => state[prop];
+  }
   const data = useRef({}).current;
   data.selector = selector;
   data.rerender = useState(undefined)[1];
+  data.stateValues = {};
+  data.stateProps = new Set();
 
   if (!data.handleChange || data.store !== store) {
     data.store = store;
     delete data.error;
+    data.getStateAccessor = () => {
+      if (!data.stateAccessor) {
+        data.stateAccessor = {};
+        Object.keys(store.getState()).forEach((key) => {
+          Object.defineProperty(data.stateAccessor, key, {
+            get() {
+              data.stateProps.add(key);
+              const value = store[key];
+              data.stateValues[key] = value;
+              return value;
+            },
+          });
+        });
+      }
+      return data.stateAccessor;
+    };
     data.handleChange = () => {
       data.error = undefined;
       try {
-        const next = data.selector(data.store["@@state"].get());
-
-        if (isEqual(next, data.prev)) return;
-      } catch (e) {
-        if (isPromiseLike(e)) {
-          e.finally(data.handleChange);
+        if (data.selector) {
+          const next = data.selector(data.store.getState());
+          if (isEqual(next, data.prev)) return;
+        } else {
+          const next = {};
+          data.stateProps.forEach((key) => {
+            next[key] = data.store[key];
+          });
+          if (isEqual(next, data.stateValues)) return;
         }
+      } catch (e) {
         data.error = e;
       }
-
       data.rerender({});
     };
   }
-  useLayoutEffect(() => {
+  useEffect(() => {
     const unsubscribe = data.store.subscribe(data.handleChange);
     return () => {
       unsubscribe();
@@ -36,7 +58,7 @@ export default function useStore(store, selector = defaultSelector) {
   }, [data, store]);
 
   if (data.error) throw data.error;
-
-  data.prev = data.selector(data.store["@@state"].get());
+  if (!selector) return data.getStateAccessor();
+  data.prev = data.selector(data.store.getState());
   return data.prev;
 }
