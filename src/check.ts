@@ -1,5 +1,4 @@
-import minsto, { Action, StoreModel } from "./index";
-import task from "./task";
+import minsto, { Action, StoreModel, createTask, Task, Store } from "./index";
 
 interface TodoStoreModel extends StoreModel {
   state: {
@@ -24,33 +23,31 @@ interface HistoryPluginModel<TEntry = any> {
 
 const store = minsto({
   state: {
-    count: 0
+    count: 0,
   },
   actions: {
-    increase(store, payload) {}
+    increase(store: Store<TodoStoreModel>, payload) {
+      store.mutate("count", 1);
+    },
   },
   plugins: {
-    history: undefined as HistoryPluginModel
+    history: undefined as HistoryPluginModel,
   },
   listeners: {
-    click(args) {}
-  }
+    click(args) {},
+  },
 });
 
-const f1 = task((a: number, b: string) => a + b, { latest: true });
-const f2 = task((a: number, b: string) => (t) => a + b, { latest: true });
-const f3 = task((a: number, b: string) => Promise.resolve(a + b), {
-  latest: true
-});
-const f4 = task((a: number, b: string) => (t) => Promise.resolve(a + b), {
-  latest: true
+const t1 = createTask();
+const t2 = createTask({
+  start(task?: Task) {
+    return task;
+  },
 });
 
 console.log(
-  f1(1, "a"),
-  f2(1, "a"),
-  f3(1, "a"),
-  f4(1, "a"),
+  t1,
+  t2,
   store.increase(100),
   store.count,
   store.history.current,

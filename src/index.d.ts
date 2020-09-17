@@ -47,7 +47,17 @@ export interface StoreBase<TModel> {
     payload?: TPayload
   ): TResult;
   dynamic(prop: string): any;
-  dynamic(prop: string, value: any): void;
+  dynamic(
+    prop: string,
+    value: ((dynamicValue: any, rawValue?: any) => any) | any
+  ): void;
+  mutate<
+    TKey extends keyof ModelStateInfer<TModel>,
+    TValue extends ModelStateInfer<TModel>[TKey]
+  >(
+    prop: TKey,
+    value: ((prev: TValue) => TValue) | TValue
+  ): void;
 }
 
 export interface StateChangeEventArgs<TModel> {
@@ -70,6 +80,7 @@ export interface DispatchEventArgs<TModel, TPayload = any> {
 export type Unsubscribe = () => void;
 
 export interface PluginModel extends ModelBase {
+  isolate?: boolean;
   init?(plugin?: any, store?: any): any;
 }
 
@@ -84,12 +95,14 @@ export interface ModelBase {
 
 export type Action<TModel = any, TPayload = any, TResult = void> = (
   store?: Store<TModel>,
-  payload?: TPayload
+  payload?: TPayload,
+  task?: Task
 ) => TResult;
 
 export type ActionBody<TModel, TPayload, TResult> = (
   store?: Store<TModel>,
-  payload?: TPayload
+  payload?: TPayload,
+  task?: Task
 ) => TResult;
 
 export type ModelActionsInfer<TModel> = TModel extends {
@@ -122,4 +135,36 @@ export type ModelPluginsInfer<TModel> = TModel extends {
   ? { [key in keyof TPlugins]: Plugin<TPlugins[key]> }
   : {};
 
-export type Listener<T = any> = (args: T) => any;
+export type Listener<T = any> = (args?: T, task?: Task) => any;
+
+export interface Cancellable {
+  cancelled(): boolean;
+  cancel(): void;
+}
+
+export interface Task extends Cancellable {
+  wrap<T>(promise: Promise<T>): Promise<T> & Cancellable;
+  wrap<T extends Function>(fn: T): T;
+  delay(ms: number, fn?: Function): Promise<void> & Cancellable;
+  latest(): void;
+  call<T extends (...args: any[]) => any>(
+    fn: T,
+    ...args: Parameters<T>
+  ): CallResultInfer<ReturnType<T>>;
+  create<TResult>(fn: (subTask?: Task) => TResult): TResult;
+  create(): Task;
+  onCancel(callback: Function): Unsubscribe;
+}
+
+export type CallResultInfer<T> = T extends Promise<infer TResolved>
+  ? Promise<TResolved> & Cancellable
+  : T;
+
+export function createTask(): Task;
+export function createTask<TResult>(
+  options: TaskOptions & { start(task?: Task): TResult }
+): TResult;
+
+export interface TaskOptions {
+  last?: Task;
+}

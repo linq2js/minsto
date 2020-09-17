@@ -1,0 +1,6 @@
+{
+  "internal": true,
+  "main": "../dist/reactotron.js",
+  "module": "../dist/reactotron.js",
+  "types": "../src/reactotron.d.ts"
+}

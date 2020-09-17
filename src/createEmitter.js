@@ -99,7 +99,7 @@ export default function createEmitter() {
       emitOnce,
       clear,
       once,
-      length
+      length,
     });
   }
 
@@ -139,6 +139,6 @@ export default function createEmitter() {
         // clear all event listeners
         all = {};
       }
-    }
+    },
   };
 }
