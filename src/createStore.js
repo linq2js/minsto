@@ -1,3 +1,4 @@
+import createArrayKeyedMap from "./createArrayKeyedMap";
 import createEmitter from "./createEmitter";
 import createMatcher from "./createMatcher";
 import createSelector from "./createSelector";
@@ -5,14 +6,23 @@ import createTask from "./createTask";
 import ErrorWrapper from "./ErrorWrapper";
 import isEqual from "./isEqual";
 import isPromiseLike from "./isPromiseLike";
+import Loadable from "./Loadable";
 import { dispatchContext, selectContext } from "./storeContext";
+
+const undefinedLoadable = new Loadable();
 
 export default function createStore(model = {}, options = {}) {
   const { parentStore } = options;
   const emitter = createEmitter();
   const selectors = {};
-  const dynamicState = {};
+  const loadables = {};
   const plugins = {};
+  const defaultCallbackCache = createArrayKeyedMap();
+  let state = {};
+  let notifyChangeTimerId;
+  let loading = false;
+  let loadingPromise;
+  let loadingError;
   const store = {
     when,
     watch,
@@ -21,13 +31,18 @@ export default function createStore(model = {}, options = {}) {
     dispatch,
     onChange,
     onDispatch,
-    dynamic,
+    $,
     mutate,
     // compatible with redux
     subscribe,
+    callback: createCallback,
+    get loading() {
+      return loading;
+    },
+    get error() {
+      return loadingError;
+    },
   };
-  let state = {};
-  let notifyChangeTimerId;
 
   if (model.state) {
     Object.entries(model.state).forEach(([propName, defaultValue]) => {
@@ -35,9 +50,15 @@ export default function createStore(model = {}, options = {}) {
       const get = () => {
         const sc = selectContext();
         if (sc) {
-          const dynamicValue = dynamicState[propName];
-          if (isPromiseLike(dynamicValue)) throw dynamicValue;
-          if (dynamicValue instanceof ErrorWrapper) throw dynamicValue.error;
+          if (loading) {
+            if (loadingError) throw loadingError;
+            throw loadingPromise;
+          }
+          const loadable = loadables[propName];
+          if (loadable) {
+            if (loadable.loading) throw loadable.promise;
+            if (loadable.hasError) throw loadable.error;
+          }
         }
         return state[propName];
       };
@@ -99,7 +120,23 @@ export default function createStore(model = {}, options = {}) {
   }
 
   if (model.init) {
-    model.init(store, parentStore);
+    const initResult = model.init(store, parentStore);
+    if (isPromiseLike(initResult)) {
+      loading = true;
+      loadingPromise = initResult.then(
+        () => {
+          loading = false;
+          loadingPromise = undefined;
+          emitter.emitOnce("ready");
+        },
+        (error) => {
+          loadingError = error;
+          emitter.emitOnce("error", error);
+        }
+      );
+    }
+  } else {
+    emitter.emitOnce("ready");
   }
 
   function notifyChange() {
@@ -119,42 +156,54 @@ export default function createStore(model = {}, options = {}) {
     return plugins;
   }
 
-  function dynamic(prop, value) {
-    if (typeof value === "function") {
-      value = value(dynamicState[prop], state[prop]);
+  function loadableOf(prop) {
+    let loadable = loadables[prop];
+    if (!loadable) {
+      if (prop in state) {
+        loadables[prop] = loadable = new Loadable(state[prop]);
+      } else {
+        loadables[prop] = loadable = undefinedLoadable;
+      }
     }
+    return loadable;
+  }
+
+  function $(prop, value) {
     // getter
     if (arguments.length < 2) {
-      return dynamicState[prop];
+      return prop in loadables ? loadables[prop].value : state[prop];
+    }
+    if (typeof value === "function") {
+      value = value(state[prop], loadableOf(prop));
     }
     // setter
     if (isPromiseLike(value)) {
-      if (dynamicState[prop] === value) return;
       const promise = value;
-      dynamicState[prop] = promise;
+      if (prop in loadables && loadables[prop].promise === promise) return;
+      const loadable = (loadables[prop] = new Loadable(promise));
+
       promise.then(
         (payload) => {
-          if (dynamicState[prop] !== promise) return;
+          if (loadables[prop] !== loadable) return;
           if (prop in state) {
-            delete dynamicState[prop];
             mutate(prop, payload);
           } else {
-            dynamicState[prop] = payload;
+            loadables[prop] = new Loadable(payload);
             debouncedNotifyChange();
           }
         },
         (error) => {
-          dynamicState[prop] = new ErrorWrapper(error);
+          if (loadables[prop] !== loadable) return;
+          loadables[prop] = new Loadable(new ErrorWrapper(error));
           debouncedNotifyChange();
         }
       );
       notifyChange();
     } else if (prop in state) {
-      delete dynamicState[prop];
       mutate(prop, value);
     } else {
-      if (dynamicState[prop] === value) return;
-      dynamicState[prop] = value;
+      if (prop in loadables && loadables[prop].value === value) return;
+      loadables[prop] = new Loadable(value);
       notifyChange();
     }
   }
@@ -164,7 +213,15 @@ export default function createStore(model = {}, options = {}) {
     setTimeout(notifyChange, notifyChangeTimerId);
   }
 
+  function createCallback(callback, ...keys) {
+    const sc = selectContext();
+    const cache = sc ? sc.cache : defaultCallbackCache;
+    return cache.getOrAdd(keys, () => (...args) => callback(...args));
+  }
+
   function mutate(prop, value) {
+    delete loadables[prop];
+
     const prev = state[prop];
     if (typeof value === "function") {
       value = value(prev);
@@ -177,11 +234,18 @@ export default function createStore(model = {}, options = {}) {
 
   function when(event, callback) {
     const hasCallback = arguments.length > 1;
+    if (hasCallback && callback) {
+      callback = wrapListener(callback);
+    }
+
     if (event === "#change") {
       return emitter.on("change", callback);
     }
     if (event === "#dispatch") {
       return emitter.on("dispatch", callback);
+    }
+    if (event === "#error") {
+      return emitter.on("error", callback);
     }
     let unsubscribes = [];
 
@@ -283,17 +347,23 @@ export default function createStore(model = {}, options = {}) {
   }
 
   function onChange(listener) {
-    return emitter.on("change", listener);
+    return emitter.on("change", wrapListener(listener));
   }
 
-  function onDispatch(listener) {
+  function wrapListener(listener) {
+    if (listener.__wraped === true) return listener;
     let last;
     const wrapper = (args) => {
       const task = createTask({ last });
       last = task;
       return task.call(listener, args, task);
     };
-    return emitter.on("dispatch", wrapper);
+    wrapper.__wraped = true;
+    return wrapper;
+  }
+
+  function onDispatch(listener) {
+    return emitter.on("dispatch", wrapListener(listener));
   }
 
   function subscribe(subscription) {

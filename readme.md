@@ -58,6 +58,63 @@ function TodoList() {
 }
 ```
 
+The useStore hook has the following signature.
+
+```jsx harmony
+const result = useStore(CounterStore, (store) => {
+  return {
+    count: store.count,
+    increase: store.increase,
+  };
+});
+console.log(result.count, result.increase);
+```
+
+The hook accepts a storeMapper function.
+The storeMapper function will be provided your input store and should return the slice of state or actions required by your component.
+Anytime an update occurs on your store the storeMapper function will be executed, and if the newly mapped result does not equal the previously mapped result your component will be rendered with the new value.
+
+## Using actions to update state
+
+In this section we will tell you how to update store state
+
+### Defining actions on our model
+
+We are going to define two actions on our counterStoreModel;
+one to increase count state, and another to decrease count state.
+Action is pure function that retrieves two arguments (store object and action payload)
+
+```jsx harmony
+const counterStoreModel = {
+  state: {
+    count: 0,
+  },
+  // all action definitions must be placed inside actions block
+  actions: {
+    increase(store, payload) {
+      store.count++;
+    },
+    decrease(store, payload) {
+      store.count--;
+    },
+  },
+};
+```
+
+Because action is pure function, you can write unit test easily
+
+```jsx harmony
+test("increase", () => {
+  const state = { count: 0 };
+  counterStoreModel.actions.increase(state);
+  expec(state.count).toBe(1);
+});
+```
+
+## Using custom hook
+
+[Counter App with custom store hook](https://codesandbox.io/s/minsto-custom-hook-lqk94?file=/src/App.js)
+
 ## Features
 
 1. Zero configuration

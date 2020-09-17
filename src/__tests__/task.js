@@ -42,3 +42,66 @@ test("call", async () => {
   await delay(15);
   expect(callback).toBeCalledTimes(1);
 });
+
+test("all", async () => {
+  const callback = jest.fn();
+  createTask()
+    .all([delay(10, 1), delay(5, 2)])
+    .then(callback);
+  expect(callback).toBeCalledTimes(0);
+  await delay(15);
+  expect(callback).toBeCalledTimes(1);
+  expect(callback).toHaveBeenLastCalledWith([1, 2]);
+
+  createTask().all([delay(10, 3), delay(5, 4)], (result) => callback(result));
+  await delay(15);
+  expect(callback).toBeCalledTimes(2);
+  expect(callback).toHaveBeenLastCalledWith([3, 4]);
+
+  const p1 = createTask().all([delay(10, 1), delay(5, 2)]);
+  p1.then(callback);
+  p1.cancel();
+  expect(callback).toBeCalledTimes(2);
+  await delay(15);
+  expect(callback).toBeCalledTimes(2);
+
+  const p2 = createTask().all([delay(10, 1), delay(5, 2)], callback);
+  p2.cancel();
+  expect(callback).toBeCalledTimes(2);
+  await delay(15);
+  expect(callback).toBeCalledTimes(2);
+});
+
+test("race", async () => {
+  const callback = jest.fn();
+  createTask()
+    .race({ prop1: delay(10, 1), prop2: delay(5, 2) })
+    .then(callback);
+  expect(callback).toBeCalledTimes(0);
+  await delay(15);
+  expect(callback).toBeCalledTimes(1);
+  expect(callback).toHaveBeenLastCalledWith({ prop2: 2 });
+
+  createTask().race({ prop3: delay(10, 3), prop4: delay(5, 4) }, (result) =>
+    callback(result)
+  );
+  await delay(15);
+  expect(callback).toBeCalledTimes(2);
+  expect(callback).toHaveBeenLastCalledWith({ prop4: 4 });
+
+  const p1 = createTask().race({ prop1: delay(10, 1), prop2: delay(5, 2) });
+  p1.then(callback);
+  p1.cancel();
+  expect(callback).toBeCalledTimes(2);
+  await delay(15);
+  expect(callback).toBeCalledTimes(2);
+
+  const p2 = createTask().race(
+    { prop1: delay(10, 1), prop2: delay(5, 2) },
+    callback
+  );
+  p2.cancel();
+  expect(callback).toBeCalledTimes(2);
+  await delay(15);
+  expect(callback).toBeCalledTimes(2);
+});

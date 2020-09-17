@@ -18,6 +18,8 @@ export interface StoreModel extends ModelBase {
 }
 
 export interface StoreBase<TModel> {
+  readonly loading: boolean;
+  readonly error: any;
   onChange(listener: Listener<StateChangeEventArgs<TModel>>): Unsubscribe;
   onDispatch(listener: Listener<DispatchEventArgs<TModel>>): Unsubscribe;
 
@@ -46,10 +48,10 @@ export interface StoreBase<TModel> {
     action: Action<TModel, TPayload, TResult>,
     payload?: TPayload
   ): TResult;
-  dynamic(prop: string): any;
-  dynamic(
+  $(prop: string): any;
+  $(
     prop: string,
-    value: ((dynamicValue: any, rawValue?: any) => any) | any
+    value: ((value: any, loadable?: Loadable<any>) => any) | any
   ): void;
   mutate<
     TKey extends keyof ModelStateInfer<TModel>,
@@ -58,6 +60,24 @@ export interface StoreBase<TModel> {
     prop: TKey,
     value: ((prev: TValue) => TValue) | TValue
   ): void;
+  loadableOf<TProp extends keyof ModelStateInfer<TModel>>(
+    prop: TProp
+  ): Loadable<ModelStateInfer<TModel>[TProp]>;
+  loadableOf(prop: string): Loadable<any>;
+  callback<TCallback extends Function>(
+    fn: TCallback,
+    ...cacheKeys: any[]
+  ): TCallback;
+}
+
+export interface Loadable<T> {
+  readonly value: T;
+  readonly status: "loading" | "hasError" | "hasValue";
+  readonly error: any;
+  readonly promise: Promise<any>;
+  readonly loading: boolean;
+  readonly hasError: boolean;
+  readonly hasValue: boolean;
 }
 
 export interface StateChangeEventArgs<TModel> {
@@ -146,6 +166,7 @@ export interface Task extends Cancellable {
   wrap<T>(promise: Promise<T>): Promise<T> & Cancellable;
   wrap<T extends Function>(fn: T): T;
   delay(ms: number, fn?: Function): Promise<void> & Cancellable;
+  debounce(ms: number): Promise<void> & Cancellable;
   latest(): void;
   call<T extends (...args: any[]) => any>(
     fn: T,
@@ -154,16 +175,27 @@ export interface Task extends Cancellable {
   create<TResult>(fn: (subTask?: Task) => TResult): TResult;
   create(): Task;
   onCancel(callback: Function): Unsubscribe;
+  all(
+    targets: Promise<any>[],
+    callback?: (results?: any[]) => any
+  ): Promise<any[]> & Cancellable;
+  race<
+    T extends { [key: string]: Promise<any> },
+    TResult extends { [key in keyof T]: any }
+  >(
+    targets: T,
+    callback?: (results?: TResult) => any
+  ): Promise<TResult> & Cancellable;
 }
 
 export type CallResultInfer<T> = T extends Promise<infer TResolved>
   ? Promise<TResolved> & Cancellable
   : T;
-
-export function createTask(): Task;
-export function createTask<TResult>(
-  options: TaskOptions & { start(task?: Task): TResult }
-): TResult;
+//
+// export function createTask(): Task;
+// export function createTask<TResult>(
+//   options: TaskOptions & { start(task?: Task): TResult }
+// ): TResult;
 
 export interface TaskOptions {
   last?: Task;

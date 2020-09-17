@@ -1,4 +1,7 @@
+import createTask from "../createTask";
 import minsto from "../index";
+
+const { delay } = createTask();
 
 test("mutate store.stateProp", () => {
   const store = minsto({ state: { count: 0 } });
@@ -16,8 +19,8 @@ test("call store.action", () => {
       update(store) {
         store.v1++;
         store.v2++;
-      }
-    }
+      },
+    },
   });
   store.onChange(callback);
   // should optimize state mutation, notify change once after dispatching
@@ -25,4 +28,16 @@ test("call store.action", () => {
   expect(store.v1).toBe(2);
   expect(store.v2).toBe(3);
   expect(callback).toBeCalledTimes(1);
+});
+
+test("lazy init (success)", async () => {
+  const store = minsto({
+    init(store) {
+      return delay(10);
+    },
+  });
+
+  expect(store.loading).toBeTruthy();
+  await delay(15);
+  expect(store.loading).toBeFalsy();
 });

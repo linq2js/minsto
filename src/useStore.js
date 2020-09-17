@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import createArrayKeyedMap from "./createArrayKeyedMap";
 import isEqual from "./isEqual";
 import isPromiseLike from "./isPromiseLike";
 import { selectContext } from "./storeContext";
@@ -18,7 +19,14 @@ export default function useStore(store, selector) {
     delete data.error;
     data.select = () => {
       try {
-        selectContext(true);
+        selectContext({
+          get cache() {
+            if (!data.cache) {
+              data.cache = createArrayKeyedMap();
+            }
+            return data.cache;
+          },
+        });
         return data.selector(data.store);
       } finally {
         selectContext(undefined);
