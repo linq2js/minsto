@@ -8,6 +8,7 @@ import isEqual from "./isEqual";
 import isPromiseLike from "./isPromiseLike";
 import Loadable from "./Loadable";
 import { dispatchContext, selectContext } from "./storeContext";
+import ValueWrapper from "./ValueWrapper";
 
 const undefinedLoadable = new Loadable();
 
@@ -16,7 +17,7 @@ export default function createStore(model = {}, options = {}) {
   const emitter = createEmitter();
   const selectors = {};
   const loadables = {};
-  const plugins = {};
+  const children = {};
   const defaultCallbackCache = createArrayKeyedMap();
   let state = {};
   let notifyChangeTimerId;
@@ -46,7 +47,10 @@ export default function createStore(model = {}, options = {}) {
 
   if (model.state) {
     Object.entries(model.state).forEach(([propName, defaultValue]) => {
-      state[propName] = defaultValue;
+      state[propName] =
+        defaultValue instanceof ValueWrapper
+          ? defaultValue.value
+          : defaultValue;
       const get = () => {
         const sc = selectContext();
         if (sc) {
@@ -104,18 +108,21 @@ export default function createStore(model = {}, options = {}) {
     });
   }
 
-  if (model.plugins) {
-    Object.entries(model.plugins).forEach(([pluginName, pluginModel]) => {
-      const pluginStore = createStore(pluginModel, { parentStore: store });
-      plugins[pluginName] = pluginStore;
-      if (!pluginModel.isolate) {
-        state[pluginName] = pluginStore.getState();
+  if (model.children) {
+    Object.entries(model.children).forEach(([childName, childModel]) => {
+      const pluginStore = createStore(childModel, { parentStore: store });
+      children[childName] = pluginStore;
+      // child store is isolated if its name starts with $ (this can be controlled by parent store)
+      // or its model.isolate is true (this can be controlled by store factory util)
+      const isolate = childName.charAt(0) === "$" || childModel.isolate;
+      if (!isolate) {
+        state[childName] = pluginStore.getState();
         pluginStore.onChange(() => {
           const pluginState = pluginStore.getState();
-          mutate(pluginName, pluginState);
+          mutate(childName, pluginState);
         });
       }
-      defProp(store, pluginName, pluginStore, false);
+      defProp(store, childName, pluginStore, false);
     });
   }
 
@@ -144,7 +151,7 @@ export default function createStore(model = {}, options = {}) {
     if (dc) {
       dc.notifyChanges.add(notifyChange);
     } else {
-      emitter.emit("change", { target: store, state });
+      emitter.emit("change", { store, state });
     }
   }
 
@@ -153,7 +160,7 @@ export default function createStore(model = {}, options = {}) {
   }
 
   function getPlugins() {
-    return plugins;
+    return children;
   }
 
   function loadableOf(prop) {
@@ -223,7 +230,9 @@ export default function createStore(model = {}, options = {}) {
     delete loadables[prop];
 
     const prev = state[prop];
-    if (typeof value === "function") {
+    if (value instanceof ValueWrapper) {
+      value = value.value;
+    } else if (typeof value === "function") {
       value = value(prev);
     }
     if (prev !== value) {
@@ -320,7 +329,7 @@ export default function createStore(model = {}, options = {}) {
         dispatchContext(undefined);
         dc.notifyChanges.forEach((x) => x());
       }
-      emitter.emit("dispatch", { type: actionType, payload, target: store });
+      emitter.emit("dispatch", { type: actionType, payload, store });
     }
   }
 
@@ -382,4 +391,16 @@ function createEventMatcher(event) {
   if (typeof event === "function")
     return createMatcher(event.displayName || event.name);
   throw new Error("Invalid event type");
+}
+
+function deepCloneObject(obj) {
+  const result = {};
+  Object.entries(obj).forEach(([key, value]) => {
+    if (Array.isArray(value) || typeof value !== "object") {
+      result[key] = value;
+    } else {
+      result[key] = deepCloneObject(value);
+    }
+  });
+  return result;
 }

@@ -4,7 +4,7 @@ function createHistoryPlugin(props) {
   return {
     state: {
       current: undefined,
-      entries: []
+      entries: [],
     },
     init(store, parentStore) {
       parentStore.watch(props, (args) => {
@@ -15,17 +15,17 @@ function createHistoryPlugin(props) {
       push(store, entry) {
         store.entries = store.entries.concat(entry);
         store.current = entry;
-      }
-    }
+      },
+    },
   };
 }
 
 test("history", () => {
   const store = minsto({
     state: { v1: 1, v2: 2, v3: 3 },
-    plugins: {
-      history: createHistoryPlugin(["v1", "v2"])
-    }
+    children: {
+      history: createHistoryPlugin(["v1", "v2"]),
+    },
   });
 
   expect(store.history.current).toBeUndefined();
@@ -38,6 +38,6 @@ test("history", () => {
   expect(store.history.current).toEqual({ v1: 2, v2: 3 });
   expect(store.history.entries).toEqual([
     { v1: 2, v2: 2 },
-    { v1: 2, v2: 3 }
+    { v1: 2, v2: 3 },
   ]);
 });

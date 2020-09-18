@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react-hooks";
+import { act, renderHook } from "@testing-library/react-hooks";
 import minsto from "../index";
 import useStore from "../react";
 
@@ -10,5 +10,10 @@ const counterModel = {
 test("component level hook", () => {
   const counterStore = minsto(counterModel);
   const useCounterStore = useStore.create(counterStore);
-  const {} = renderHook(() => useCounterStore((store) => store.count));
+  const { result } = renderHook(() => useCounterStore((store) => store.count));
+  expect(result.current).toBe(0);
+  act(() => {
+    counterStore.increase();
+  });
+  expect(result.current).toBe(1);
 });

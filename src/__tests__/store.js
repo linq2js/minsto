@@ -41,3 +41,15 @@ test("lazy init (success)", async () => {
   await delay(15);
   expect(store.loading).toBeFalsy();
 });
+
+test("lazy init (failure)", async () => {
+  const store = minsto({
+    init(store) {
+      return delay(10).then(() => Promise.reject("invalid"));
+    },
+  });
+  expect(store.loading).toBeTruthy();
+  await delay(15);
+  expect(store.loading).toBeTruthy();
+  expect(store.error).toBe("invalid");
+});

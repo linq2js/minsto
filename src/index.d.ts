@@ -3,21 +3,22 @@ export default function minsto<TModel extends StoreModel = any>(
 ): Store<TModel>;
 
 export type Store<TModel = any> = ModelBaseInfer<TModel> &
-  ModelPluginsInfer<TModel> &
+  ModelChildrenInfer<TModel> &
   StoreBase<TModel>;
-
-export type Plugin<TModel = any> = ModelBaseInfer<TModel>;
 
 export type ModelBaseInfer<TModel> = ModelActionsInfer<TModel> &
   ModelStateInfer<TModel> &
   ModelComputedInfer<TModel>;
 
 export interface StoreModel extends ModelBase {
-  init?(store?: any): any;
-  plugins?: {};
+  name?: string;
+  isolate?: boolean;
+  init?(store?: any, parentStore?: any): any;
+  children?: {};
 }
 
 export interface StoreBase<TModel> {
+  readonly name: string;
   readonly loading: boolean;
   readonly error: any;
   onChange(listener: Listener<StateChangeEventArgs<TModel>>): Unsubscribe;
@@ -81,7 +82,7 @@ export interface Loadable<T> {
 }
 
 export interface StateChangeEventArgs<TModel> {
-  target: Store<TModel> | Plugin<TModel>;
+  store: Store<TModel>;
   state: ModelStateInfer<TModel>;
 }
 
@@ -93,16 +94,11 @@ export interface ValueChangeEventArgs<TModel, TValue>
 
 export interface DispatchEventArgs<TModel, TPayload = any> {
   type: string;
-  target: Store<TModel> | Plugin<TModel>;
+  store: Store<TModel>;
   payload: TPayload;
 }
 
 export type Unsubscribe = () => void;
-
-export interface PluginModel extends ModelBase {
-  isolate?: boolean;
-  init?(plugin?: any, store?: any): any;
-}
 
 export interface ModelBase {
   state?: {};
@@ -149,10 +145,10 @@ export type ModelComputedInfer<TModel> = TModel extends {
   ? { [key in keyof TComputed]: any }
   : {};
 
-export type ModelPluginsInfer<TModel> = TModel extends {
-  plugins: infer TPlugins;
+export type ModelChildrenInfer<TModel> = TModel extends {
+  children: infer TChildren;
 }
-  ? { [key in keyof TPlugins]: Plugin<TPlugins[key]> }
+  ? { [key in keyof TChildren]: Store<TChildren[key]> }
   : {};
 
 export type Listener<T = any> = (args?: T, task?: Task) => any;
@@ -191,12 +187,4 @@ export interface Task extends Cancellable {
 export type CallResultInfer<T> = T extends Promise<infer TResolved>
   ? Promise<TResolved> & Cancellable
   : T;
-//
-// export function createTask(): Task;
-// export function createTask<TResult>(
-//   options: TaskOptions & { start(task?: Task): TResult }
-// ): TResult;
 
-export interface TaskOptions {
-  last?: Task;
-}

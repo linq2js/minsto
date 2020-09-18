@@ -1,0 +1,6 @@
+{
+  "internal": true,
+  "main": "../dist/extras.js",
+  "module": "../dist/extras.js",
+  "types": "../src/extras.d.ts"
+}

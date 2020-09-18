@@ -7,6 +7,12 @@ export function connectReactotronRedux(enhancer, rootStore) {
       },
       dispatch(action) {
         if (isTriggeringDispatch) return;
+        const [storePath, actionType] = action.type.split("@");
+        const store = storePath
+          .split("->")
+          .slice(1)
+          .reduce((parentStore, prop) => parentStore[prop], rootStore);
+        return store.dispatch({ type: actionType, payload: action.payload });
       },
       subscribe(subscription) {
         return rootStore.onDispatch(subscription);
@@ -19,7 +25,7 @@ export function connectReactotronRedux(enhancer, rootStore) {
       try {
         isTriggeringDispatch = true;
         enhancedStore.dispatch({
-          type: name + "->" + args.type,
+          type: name + "@" + args.type,
           payload: args.payload,
         });
       } finally {
@@ -28,11 +34,11 @@ export function connectReactotronRedux(enhancer, rootStore) {
     });
 
     Object.entries(store.getPlugins()).forEach(([pluginName, plugin]) => {
-      handleDispatching(plugin, name + "." + pluginName);
+      handleDispatching(plugin, name + "->" + pluginName);
     });
   }
 
-  handleDispatching(rootStore, "root");
+  handleDispatching(rootStore, rootStore.name || "root");
 
   return enhancedStore;
 }

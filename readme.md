@@ -128,9 +128,39 @@ test("increase", () => {
 1. Data fetching / side effects
 1. Extensive TypeScript support
 1. Global, shared, or component level stores
+1. Local store supported
 1. React Native supported
 1. Hot Reloading supported
 1. Reactotron supported
+
+## Local Store (TBD)
+
+If you don't want to mess many things into the global state,
+you can use local store to split app logics that used to only specified component.
+The local store instance stored in host component. It will be removed when its host component is unmounted.
+A host component can contain many local store, local store model can be reused by many components.
+
+```jsx harmony
+import { useLocalStore } from "minsto/react";
+const CounterModel = {
+  state: {
+    count: 0,
+    step: 1,
+  },
+  actions: {
+    increase() {
+      store.count += store.step;
+    },
+  },
+};
+const Counter = ({ step = 1 }) => {
+  const store = useLocalStore(CounterModel);
+  // pass step prop to store
+  store.step = step;
+
+  return <h1 onClick={store.increase}>{store.count}</h1>;
+};
+```
 
 ## Working with Development Tools
 

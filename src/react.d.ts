@@ -1,28 +1,25 @@
-import { Store } from "./index";
+import { Store, StoreModel } from "./index";
 
-declare const useStore: UseStore;
+export default function useStore<TModel, TResult>(
+  store: Store<TModel>,
+  selector: (store: Store<TModel>) => TResult
+): TResult;
 
-export default useStore;
+export function createComponentStore<TModel>(
+  store: Store<TModel>
+): ComponentStore<TModel>;
 
-export interface UseStore extends StoreHook {
-  <TModel, TResult>(
-    store: Store<TModel>,
-    selector: (store: Store<TModel>) => TResult
-  ): TResult;
-  create<TModel>(store: Store<TModel>): StoreHookWrapper<TModel>;
-  create<TModel, TPayload, TResult>(
-    store: Store<TModel>,
-    selector: (store: Store<TModel>, payload: TPayload) => TResult
-  ): (payload?: TPayload) => TResult;
-}
+export function createComponentStore<TModel, TPayload, TResult>(
+  store: Store<TModel>,
+  selector: (store: Store<TModel>, payload: TPayload) => TResult
+): ComponentStoreWithSelector<TPayload, TResult>;
 
-export interface StoreHookWrapper<TModel> extends Function {
+export interface ComponentStore<TModel> extends Function {
   <TResult>(selector: (store: Store<TModel>) => TResult): TResult;
 }
 
-export interface StoreHook extends Function {
-  <TModel, TResult>(
-    store: Store<TModel>,
-    selector: (store: Store<TModel>) => TResult
-  ): TResult;
-}
+export type ComponentStoreWithSelector<TPayload, TResult> = (
+  payload?: TPayload
+) => TResult;
+
+export function useLocalStore<T extends StoreModel>(model: T): Store<T>;

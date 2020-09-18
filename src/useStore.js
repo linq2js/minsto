@@ -52,17 +52,3 @@ export default function useStore(store, selector) {
   data.prev = data.select();
   return data.prev;
 }
-
-Object.assign(useStore, {
-  create(store) {
-    if (arguments.length < 2) {
-      return function (selector) {
-        return useStore(store, selector);
-      };
-    }
-    const selector = arguments[1];
-    return function (payload) {
-      return useStore(store, () => selector(store, payload));
-    };
-  },
-});

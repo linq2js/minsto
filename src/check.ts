@@ -1,5 +1,11 @@
-import minsto, { Action, StoreModel, Task, Store } from "./index";
-import useStore from "./react";
+import minsto, { Action, StoreModel, Store } from "./index";
+import useStore, { createComponentStore } from "./react";
+import { EntitiesStoreModel } from "./extras";
+
+interface Todo {
+  id: number;
+  title: string;
+}
 
 interface TodoStoreModel extends StoreModel {
   state: {
@@ -8,7 +14,7 @@ interface TodoStoreModel extends StoreModel {
   actions: {
     increase: Action<TodoStoreModel>;
   };
-  plugins: {
+  children: {
     history: HistoryPluginModel;
   };
 }
@@ -45,15 +51,16 @@ const store = minsto({
       store.results = results;
     },
   },
-  plugins: {
+  children: {
     history: undefined as HistoryPluginModel,
+    todos: undefined as EntitiesStoreModel<Todo, number>,
   },
   listeners: {
     click(args) {},
   },
 });
 
-const useCounterStore = useStore.create(store);
+const useCounterStore = createComponentStore(store);
 
 function Component() {
   const count = useCounterStore((store) => store.count);
@@ -69,6 +76,7 @@ function Component() {
 console.log(
   // t1,
   // t2,
+  store.todos.ids[0],
   store.increase(100),
   store.count,
   store.history.current,
