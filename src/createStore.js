@@ -75,7 +75,7 @@ export default function createStore(model = {}, options = {}) {
         }
         return state[propName];
       };
-      selectors["$" + propName] = get;
+      // selectors["$" + propName] = get;
       Object.defineProperty(store, propName, {
         get,
         set(value) {
@@ -89,11 +89,40 @@ export default function createStore(model = {}, options = {}) {
   }
 
   if (model.computed) {
+    function generateStateResolverIfPossible(prop) {
+      if (prop.charAt(0) !== "$" || prop in selectors) {
+        return prop;
+      }
+      const parts = prop.substr(1).split(".");
+      if (parts.length === 1) {
+        const stateProp = parts[0];
+        selectors[prop] = (state) => state[stateProp];
+      } else {
+        selectors[prop] = (state) =>
+          parts.reduce((obj, part) => obj[part], state);
+      }
+      return prop;
+    }
+
     processEntries(model.computed, ([propName, computedProp]) => {
-      const selector = createSelector(computedProp, selectors);
+      const selector =
+        typeof computedProp === "function"
+          ? computedProp
+          : createSelector(
+              Array.isArray(computedProp)
+                ? computedProp.map((prop) => {
+                    // is state resolver
+                    if (typeof prop === "string") {
+                      generateStateResolverIfPossible(prop);
+                    }
+                    return prop;
+                  })
+                : computedProp,
+              selectors
+            );
       selectors[propName] = selector;
       Object.defineProperty(store, propName, {
-        get: () => selector(state),
+        get: () => selector(state, store),
         enumerable: false,
       });
     });
@@ -321,6 +350,7 @@ export default function createStore(model = {}, options = {}) {
   }
 
   function createCallback(callback, ...keys) {
+    if (!keys.length) return callback;
     const sc = selectContext();
     const cache = sc ? sc.cache : defaultCallbackCache;
     return cache.getOrAdd(keys, () => (...args) => callback(...args));
@@ -365,6 +395,13 @@ export default function createStore(model = {}, options = {}) {
       unsubscribes.forEach((x) => x());
     }
 
+    if (typeof event === "object" && !Array.isArray(event)) {
+      unsubscribes.push(
+        ...Object.entries(event).map(([key, value]) => when(key, value))
+      );
+      return cancel;
+    }
+
     if (!hasCallback) {
       const promise = new Promise((resolve) => {
         unsubscribes.push(
@@ -376,13 +413,6 @@ export default function createStore(model = {}, options = {}) {
       });
       promise.cancel = cancel;
       return promise;
-    }
-
-    if (typeof event === "object" && !Array.isArray(event)) {
-      unsubscribes.push(
-        ...Object.entries(event).map(([key, value]) => when(key, value))
-      );
-      return cancel;
     }
 
     unsubscribes.push(addListener(event, callback));
