@@ -2,6 +2,24 @@
 
 A mini store for javascript/React app
 
+## Features
+
+1. Zero configuration
+1. No boilerplate
+1. Plugins supported
+1. React Suspense supported
+1. Future action listening supported
+1. Cancellable action dispatching supported
+1. React hooks based API
+1. Computed properties - i.e. derived data
+1. Data fetching / side effects
+1. Extensive TypeScript support
+1. Global, shared, or component level stores
+1. Local store supported
+1. React Native supported
+1. Hot Reloading supported
+1. Reactotron supported
+
 ## Get Started
 
 ### Installation
@@ -111,27 +129,9 @@ test("increase", () => {
 });
 ```
 
-## Using custom hook
+## Using component store
 
 [Counter App with custom store hook](https://codesandbox.io/s/minsto-custom-hook-lqk94?file=/src/App.js)
-
-## Features
-
-1. Zero configuration
-1. No boilerplate
-1. Plugins supported
-1. React Suspense supported
-1. Future action listening supported
-1. Cancellable action dispatching supported
-1. React hooks based API
-1. Computed properties - i.e. derived data
-1. Data fetching / side effects
-1. Extensive TypeScript support
-1. Global, shared, or component level stores
-1. Local store supported
-1. React Native supported
-1. Hot Reloading supported
-1. Reactotron supported
 
 ## Computed Properties
 

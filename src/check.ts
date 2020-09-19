@@ -1,6 +1,6 @@
-import minsto, {Action, StoreModel, Store, InitOptions} from "./index";
-import useStore, { createComponentStore } from "./react";
-import { EntitiesStoreModel } from "./extras";
+import minsto, { Action, StoreModel, Store, InitOptions } from "./index";
+import { createStoreHook } from "./react";
+import { EntitiesStoreModel, ListStoreModel } from "./extras";
 
 interface Todo {
   id: number;
@@ -16,6 +16,7 @@ interface TodoStoreModel extends StoreModel {
   };
   children: {
     history: HistoryPluginModel;
+    list: ListStoreModel<number>;
   };
 }
 
@@ -53,6 +54,7 @@ const store = minsto({
   },
   children: {
     history: undefined as HistoryPluginModel,
+    list: undefined as ListStoreModel<number>,
     todos: undefined as EntitiesStoreModel<Todo, number>,
   },
   listeners: {
@@ -62,13 +64,14 @@ const store = minsto({
     store.mergeState({
       count: 0,
       history: {
-        current: undefined
-      }
-    })
-  }
+        current: undefined,
+      },
+      list: undefined,
+    });
+  },
 });
 
-const useCounterStore = createComponentStore(store);
+const useCounterStore = createStoreHook(store);
 
 function Component() {
   const count = useCounterStore((store) => store.count);
@@ -84,6 +87,9 @@ function Component() {
 console.log(
   // t1,
   // t2,
+  store.list,
+  store.list.items,
+  store.list.splice(),
   store.todos.ids[0],
   store.increase(100),
   store.count,

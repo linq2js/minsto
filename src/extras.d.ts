@@ -18,6 +18,8 @@ export function Entities<
   }
 ): EntitiesStoreModel<TEntity, TId, TSlice>;
 
+export function List<TItem = any>(items?: TItem[]): ListStoreModel<TItem>;
+
 export interface TaskOptions {
   last?: Task;
 }
@@ -48,3 +50,26 @@ export type SliceResultInfer<TEntity, TSelector> = TSelector extends (
 ) => infer TResult
   ? TResult[]
   : never;
+
+export interface ListStoreModel<TItem> {
+  state: {
+    items: TItem[];
+  };
+  actions: {
+    push: Action<ListStoreModel<TItem>, TItem>;
+    pushArray: Action<ListStoreModel<TItem>, TItem[]>;
+    pop: Action<ListStoreModel<TItem>, TItem | undefined>;
+    shift: Action<ListStoreModel<TItem>, TItem | undefined>;
+    unshiftArray: Action<ListStoreModel<TItem>, TItem[]>;
+    unshift: Action<ListStoreModel<TItem>, TItem>;
+    sort: Action<ListStoreModel<TItem>, (a: TItem, b: TItem) => any>;
+    orderBy: Action<ListStoreModel<TItem>, (item: TItem) => any>;
+    swap: Action<ListStoreModel<TItem>, { from: number; to: number }>;
+    splice: Action<
+      ListStoreModel<TItem>,
+      { index: number; length?: number; items?: TItem[] },
+      TItem[]
+    >;
+    set: Action<ListStoreModel<TItem>, { index: number; value: TItem }>;
+  };
+}

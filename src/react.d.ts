@@ -5,20 +5,20 @@ export default function useStore<TModel, TResult>(
   selector: (store: Store<TModel>) => TResult
 ): TResult;
 
-export function createComponentStore<TModel>(
+export function createStoreHook<TModel>(
   store: Store<TModel>
-): ComponentStore<TModel>;
+): StoreHook<TModel>;
 
-export function createComponentStore<TModel, TPayload, TResult>(
+export function createStoreHook<TModel, TPayload, TResult>(
   store: Store<TModel>,
   selector: (store: Store<TModel>, payload: TPayload) => TResult
-): ComponentStoreWithSelector<TPayload, TResult>;
+): StoreHookWithSelector<TPayload, TResult>;
 
-export interface ComponentStore<TModel> extends Function {
+export interface StoreHook<TModel> extends Function {
   <TResult>(selector: (store: Store<TModel>) => TResult): TResult;
 }
 
-export type ComponentStoreWithSelector<TPayload, TResult> = (
+export type StoreHookWithSelector<TPayload, TResult> = (
   payload?: TPayload
 ) => TResult;
 

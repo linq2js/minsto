@@ -251,47 +251,56 @@ export default function createStore(model = {}, options = {}) {
     return loadable;
   }
 
-  function dynamicState(prop, value, skipNotification) {
-    // getter
-    if (arguments.length < 2) {
-      return prop in loadables ? loadables[prop].value : state[prop];
+  function dynamicState() {
+    if (typeof arguments[0] !== "object") {
+      // getter
+      if (arguments.length < 2) {
+        const prop = arguments[0];
+        return prop in loadables ? loadables[prop].value : state[prop];
+      }
+      const [prop, value, skipNotification] = arguments;
+      return dynamicState({ [prop]: value }, skipNotification);
     }
+    const [props, skipNotification] = arguments;
+    let hasChange = false;
+    Object.entries(props).forEach(([prop, value]) => {
+      if (typeof value === "function") {
+        value = value(state[prop], loadableOf(prop));
+      }
+      // setter
+      if (isPromiseLike(value)) {
+        const promise = value;
+        if (prop in loadables && loadables[prop].promise === promise) return;
+        const loadable = (loadables[prop] = new Loadable(promise));
 
-    // if (value instanceof ValueWrapper) {
-    //   value = value.value;
-    // } else
-    if (typeof value === "function") {
-      value = value(state[prop], loadableOf(prop));
-    }
-    // setter
-    if (isPromiseLike(value)) {
-      const promise = value;
-      if (prop in loadables && loadables[prop].promise === promise) return;
-      const loadable = (loadables[prop] = new Loadable(promise));
-
-      promise.then(
-        (payload) => {
-          if (loadables[prop] !== loadable) return;
-          if (prop in state) {
-            mutate(prop, payload);
-          } else {
-            loadables[prop] = new Loadable(payload);
+        promise.then(
+          (payload) => {
+            if (loadables[prop] !== loadable) return;
+            if (prop in state) {
+              mutate(prop, payload);
+            } else {
+              loadables[prop] = new Loadable(payload);
+              debouncedNotifyChange();
+            }
+          },
+          (error) => {
+            if (loadables[prop] !== loadable) return;
+            loadables[prop] = new Loadable(new ErrorWrapper(error));
             debouncedNotifyChange();
           }
-        },
-        (error) => {
-          if (loadables[prop] !== loadable) return;
-          loadables[prop] = new Loadable(new ErrorWrapper(error));
-          debouncedNotifyChange();
-        }
-      );
-      !skipNotification && notifyChange();
-    } else if (prop in state) {
-      mutate(prop, value, skipNotification);
-    } else {
-      if (prop in loadables && loadables[prop].value === value) return;
-      loadables[prop] = new Loadable(value);
-      !skipNotification && notifyChange();
+        );
+        hasChange = true;
+      } else if (prop in state) {
+        mutate(prop, value, skipNotification);
+      } else {
+        if (prop in loadables && loadables[prop].value === value) return;
+        loadables[prop] = new Loadable(value);
+        hasChange = true;
+      }
+    });
+
+    if (hasChange && !skipNotification) {
+      notifyChange();
     }
   }
 

@@ -1,6 +1,6 @@
 import useStore from "./useStore";
 
-export default function createComponentStore(store) {
+export default function createStoreHook(store) {
   if (arguments.length < 2) {
     return function (selector) {
       return useStore(store, selector);

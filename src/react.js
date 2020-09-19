@@ -1,13 +1,13 @@
 import useStore from "./useStore";
 
-import createComponentStore from "./createComponentStore";
+import createStoreHook from "./createStoreHook";
 import useLocalStore from "./useLocalStore";
 
-export { createComponentStore, useLocalStore };
+export { createStoreHook, useLocalStore };
 
 export default useStore;
 
 Object.assign(useStore, {
-  create: createComponentStore,
+  create: createStoreHook,
   local: useLocalStore,
 });

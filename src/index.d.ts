@@ -55,11 +55,14 @@ export interface StoreBase<TModel> {
     callback: Listener<ValueChangeEventArgs<TModel, TResult>>
   ): Unsubscribe;
   getState(): ModelStateInfer<TModel>;
-  mergeState(state: ModelStateInfer<TModel> & ModelChildStateInfer<TModel>): void;
+  mergeState(
+    state: ModelStateInfer<TModel> & ModelChildStateInfer<TModel>
+  ): void;
   dispatch<TPayload, TResult>(
     action: Action<TModel, TPayload, TResult>,
     payload?: TPayload
   ): TResult;
+  $(props: { [key: string]: any }): void;
   $(prop: string): any;
   $(
     prop: string,
