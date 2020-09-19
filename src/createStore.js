@@ -441,7 +441,7 @@ export default function createStore(model = {}, options = {}) {
     });
   }
 
-  function dispatch(action, payload) {
+  function dispatch(action, payload, ...args) {
     let dc = dispatchContext();
     if (!dc) {
       dispatchContext(
@@ -456,11 +456,11 @@ export default function createStore(model = {}, options = {}) {
     try {
       if (typeof action === "function") {
         actionType = action.displayName || action.name;
-        return action(store, payload);
+        return action(store, payload, ...args);
       } else if (typeof action === "object") {
         // redux compatible
         const { type, payload } = action;
-        return store[type](payload);
+        return store[type](payload, ...args);
       }
     } finally {
       dc.scopes--;
