@@ -11,6 +11,7 @@ export type Store<TModel = any> = StoreBase<TModel> &
 export interface StoreModel {
   name?: string;
   state?: {};
+  merge?(store: any, nextState: any): void;
   computed?: {};
   actions?: {};
   listeners?: {
@@ -57,6 +58,10 @@ export interface StoreBase<TModel> {
   getState(): ModelStateInfer<TModel>;
   mergeState(
     state: ModelStateInfer<TModel> & ModelChildStateInfer<TModel>
+  ): void;
+  mergeState(
+    state: ModelStateInfer<TModel> & ModelChildStateInfer<TModel>,
+    applyToAllChildren: boolean
   ): void;
   dispatch<TPayload, TResult>(
     action: Action<TModel, TPayload, TResult>,

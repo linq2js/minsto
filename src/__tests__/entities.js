@@ -78,7 +78,7 @@ test("isolated child store takes no effect when parent store changed state", () 
     },
   });
 
-  expect(store.getState()).toEqual(persistState);
+  expect(store.getState()).toEqual({});
   expect(store.$todos.ids).toEqual([1, 2]);
   expect(store.$todos.entities).toEqual({
     1: { id: 1, title: "item 1" },

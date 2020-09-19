@@ -10,13 +10,13 @@ export default function createEntitiesStore(initial, options) {
   }
 
   return {
-    init(store, { parent, initial }) {
-      if (typeof initial !== "undefined") {
+    merge(store, state = {}) {
+      if (state.ids && state.entities) {
         mutate(
           store,
           createEntitiesFrom(
-            initial.ids || [],
-            initial.entities || {},
+            state.ids || [],
+            state.entities || {},
             entities.options()
           )
         );

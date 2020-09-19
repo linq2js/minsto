@@ -17,6 +17,7 @@ export default function useStore(store, selector) {
   if (!data.handleChange || data.store !== store) {
     data.store = store;
     data.storeLoadingHandled = false;
+    delete data.cache;
     delete data.error;
     data.select = () => {
       if (data.store.loading) {

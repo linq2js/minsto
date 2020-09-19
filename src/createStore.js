@@ -45,29 +45,6 @@ export default function createStore(model = {}, options = {}) {
     },
   };
 
-  function initChildren() {
-    if (!model.children) return;
-    processEntries(model.children, ([childName, childModel]) => {
-      const isolate = childName.charAt(0) === "$" || childModel.isolate;
-      const childStore = createStore(childModel, {
-        initial: isolate ? undefined : state[childName],
-        parent: store,
-      });
-      children[childName] = childStore;
-      // child store is isolated if its name starts with dynamicProp (this can be controlled by parent store)
-      // or its model.isolate is true (this can be controlled by store factory util)
-
-      if (!isolate) {
-        state[childName] = childStore.getState();
-        childStore.onChange(() => {
-          const pluginState = childStore.getState();
-          mutate(childName, pluginState);
-        });
-      }
-      defProp(store, childName, childStore, false);
-    });
-  }
-
   function processEntries(target, callback) {
     Object.entries(target).forEach((x, index) => {
       if (process.env.NODE_ENV !== "production") {
@@ -149,6 +126,27 @@ export default function createStore(model = {}, options = {}) {
     model.inject(store, state);
   }
 
+  if (model.children) {
+    processEntries(model.children, ([childName, childModel]) => {
+      const isolate = childName.charAt(0) === "$" || childModel.isolate;
+      const childStore = createStore(childModel, {
+        parent: store,
+      });
+      children[childName] = childStore;
+      // child store is isolated if its name starts with dynamicProp (this can be controlled by parent store)
+      // or its model.isolate is true (this can be controlled by store factory util)
+
+      if (!isolate) {
+        state[childName] = childStore.getState();
+        childStore.onChange(() => {
+          const pluginState = childStore.getState();
+          mutate(childName, pluginState);
+        });
+      }
+      defProp(store, childName, childStore, false);
+    });
+  }
+
   dispatch(function init() {
     if (model.init) {
       loading = true;
@@ -163,7 +161,6 @@ export default function createStore(model = {}, options = {}) {
             () => {
               loading = false;
               store.__loadingPromise = undefined;
-              initChildren();
               emitter.emitOnce("ready");
             },
             (error) => {
@@ -173,7 +170,6 @@ export default function createStore(model = {}, options = {}) {
           );
           return store.__loadingPromise;
         }
-        initChildren();
       } catch (error) {
         loadingError = error;
         if (!isAsync) throw error;
@@ -183,7 +179,6 @@ export default function createStore(model = {}, options = {}) {
         }
       }
     } else {
-      initChildren();
       emitter.emitOnce("ready");
     }
   });
@@ -201,38 +196,54 @@ export default function createStore(model = {}, options = {}) {
     return state;
   }
 
-  function mergeState(nextState = {}) {
+  function mergeState(nextState = {}, applyToAllChildren = true) {
     const isDispatching = !!dispatchContext();
     if (!loading && !isDispatching) {
       throw new Error(
         "Cannot call mergeState outside action dispatching or store initializing phase"
       );
     }
-    let ownedState = state;
-    Object.keys(state).forEach((key) => {
-      if (state[key] !== nextState[key]) {
-        if (ownedState === state) {
-          ownedState = { ...state };
+
+    dispatch(function mergeState() {
+      let hasChange = false;
+      if (applyToAllChildren && model.children) {
+        Object.entries(model.children).forEach(([childKey, childModel]) => {
+          if (
+            !(childKey in nextState) ||
+            childKey.charAt(0) === "$" ||
+            childModel.isolate
+          )
+            return;
+          const nextChildState = nextState[childKey];
+          const childStore = children[childKey];
+          if (typeof childModel.merge === "function") {
+            childModel.merge(childStore, nextChildState);
+          } else {
+            childStore.mergeState(nextChildState);
+          }
+        });
+      }
+
+      let ownedState = state;
+      Object.keys(state).forEach((key) => {
+        if (state[key] !== nextState[key]) {
+          if (ownedState === state) {
+            ownedState = { ...state };
+          }
+          delete loadables[key];
+          ownedState[key] = nextState[key];
         }
-        delete loadables[key];
-        ownedState[key] = nextState[key];
+      });
+
+      if (ownedState !== state) {
+        state = ownedState;
+        hasChange = true;
+      }
+
+      if (hasChange) {
+        notifyChange();
       }
     });
-
-    if (loading && model.children) {
-      Object.keys(model.children).forEach((key) => {
-        if (!(key in nextState)) return;
-        if (ownedState === state) {
-          ownedState = { ...state };
-        }
-        ownedState[key] = nextState[key];
-      });
-    }
-
-    if (ownedState !== state) {
-      state = ownedState;
-      notifyChange();
-    }
   }
 
   function getPlugins() {
