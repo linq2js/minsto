@@ -1,6 +1,6 @@
 {
   "name": "minsto",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "A mini store for javascript/React app",
   "main": "dist/index.js",
   "types": "src/index.d.ts",
@@ -13,6 +13,7 @@
     "dist",
     "react",
     "extras",
+    "reactotron",
     "src"
   ],
   "bugs": {
