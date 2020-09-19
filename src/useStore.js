@@ -16,8 +16,19 @@ export default function useStore(store, selector) {
 
   if (!data.handleChange || data.store !== store) {
     data.store = store;
+    data.storeLoadingHandled = false;
     delete data.error;
     data.select = () => {
+      if (data.store.loading) {
+        if (data.store.error) {
+          throw data.store.error;
+        }
+        if (!data.storeLoadingHandled) {
+          data.storeLoadingHandled = true;
+          data.store.__loadingPromise.then(data.handleChange);
+        }
+        throw data.store.__loadingPromise;
+      }
       try {
         selectContext({
           get cache() {
@@ -39,7 +50,11 @@ export default function useStore(store, selector) {
         if (next !== data.store && isEqual(next, data.prev)) return;
       } catch (e) {
         if (isPromiseLike(e)) {
-          e.finally(data.handleChange);
+          if (e === data.store.__loadingPromise) {
+            // we already handle store loading promise
+          } else {
+            e.finally(data.handleChange);
+          }
         }
         data.error = e;
       }

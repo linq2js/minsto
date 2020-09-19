@@ -1,4 +1,4 @@
-import minsto, { Action, StoreModel, Store } from "./index";
+import minsto, {Action, StoreModel, Store, InitOptions} from "./index";
 import useStore, { createComponentStore } from "./react";
 import { EntitiesStoreModel } from "./extras";
 
@@ -58,6 +58,14 @@ const store = minsto({
   listeners: {
     click(args) {},
   },
+  init(store?: Store<TodoStoreModel>, options?: InitOptions): any {
+    store.mergeState({
+      count: 0,
+      history: {
+        current: undefined
+      }
+    })
+  }
 });
 
 const useCounterStore = createComponentStore(store);

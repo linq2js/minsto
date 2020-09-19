@@ -2,27 +2,34 @@ import { useEffect, useRef, useState } from "react";
 import createStore from "./createStore";
 
 export default function useLocalStore(model, options) {
-  const storeRef = useRef(undefined);
-  const [, renrender] = useState(undefined);
-  if (!storeRef.current) {
-    storeRef.current = createStore(model, options);
-    storeRef.current.__rerender = renrender;
-    storeRef.current.onChange(() => {
-      if (storeRef.current.__isRendering) {
-        storeRef.current.__shouldRerender = true;
+  const data = useRef({}).current;
+  const [, render] = useState(undefined);
+  data.render = render;
+  if (!data.store) {
+    data.store = createStore(model, options);
+    data.store.onChange(() => {
+      if (data.isRendering) {
+        data.shouldRerender = true;
         return;
       }
-      storeRef.current.__rerender({});
+      data.render({});
     });
   }
-
-  storeRef.current.__isRendering = true;
+  data.isRendering = true;
   useEffect(() => {
-    storeRef.current.__isRendering = false;
-    if (storeRef.current.__shouldRerender) {
-      storeRef.current.__shouldRerender = false;
-      renrender({});
+    data.isRendering = false;
+    if (data.shouldRerender) {
+      data.shouldRerender = false;
+      data.render({});
     }
   });
-  return storeRef.current;
+  if (data.store.loading) {
+    if (data.store.error) throw data.store.error;
+    if (!data.storeLoadingHandled) {
+      data.storeLoadingHandled = true;
+      data.store.__loadingPromise.then(() => data.render({}));
+    }
+    throw data.store.__loadingPromise;
+  }
+  return data.store;
 }

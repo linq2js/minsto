@@ -6,26 +6,26 @@ const defaultInitial = [];
 const emptyIds = [];
 const emptyEntities = {};
 
-export default function createEntities(
+export function createEntities(
   initial = defaultInitial,
   options = defaultOptions
 ) {
   const { selectId = defaultSelectId, equal = isEqual } = options;
-  return createEntitiesWrapper(emptyIds, emptyEntities, {
+  return createEntitiesFrom(emptyIds, emptyEntities, {
     ...options,
     selectId,
     equal,
   }).update(initial);
 }
 
-function createEntitiesWrapper(ids, entities, options) {
+export function createEntitiesFrom(ids, entities, options) {
   const { slice: slicerMap = {} } = options;
   let sliceCache = options.__sliceCache || new WeakMap();
   const slicers = Object.entries(slicerMap).map((x) => x[1]);
   let value;
 
   function create(newIds, newEntities, customOptions) {
-    return createEntitiesWrapper(newIds || ids, newEntities || entities, {
+    return createEntitiesFrom(newIds || ids, newEntities || entities, {
       ...options,
       ...customOptions,
     });
@@ -58,6 +58,9 @@ function createEntitiesWrapper(ids, entities, options) {
   return {
     ids,
     entities,
+    options() {
+      return options;
+    },
     get() {
       if (arguments.length) {
         return slice(arguments[0]);

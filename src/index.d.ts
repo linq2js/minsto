@@ -2,19 +2,29 @@ export default function minsto<TModel extends StoreModel = any>(
   model?: TModel
 ): Store<TModel>;
 
-export type Store<TModel = any> = ModelBaseInfer<TModel> &
+export type Store<TModel = any> = StoreBase<TModel> &
   ModelChildrenInfer<TModel> &
-  StoreBase<TModel>;
-
-export type ModelBaseInfer<TModel> = ModelActionsInfer<TModel> &
+  ModelActionsInfer<TModel> &
   ModelStateInfer<TModel> &
   ModelComputedInfer<TModel>;
 
-export interface StoreModel extends ModelBase {
+export interface StoreModel {
   name?: string;
+  state?: {};
+  computed?: {};
+  actions?: {};
+  listeners?: {
+    [key: string]: Listener;
+  };
   isolate?: boolean;
-  init?(store?: any, parentStore?: any): any;
+  onStateChange?(store?: any, nextState?: any): void | boolean;
+  init?(store?: any, options?: InitOptions): any;
   children?: {};
+}
+
+export interface InitOptions {
+  parent?: Store;
+  initial?: any;
 }
 
 export interface StoreBase<TModel> {
@@ -45,6 +55,7 @@ export interface StoreBase<TModel> {
     callback: Listener<ValueChangeEventArgs<TModel, TResult>>
   ): Unsubscribe;
   getState(): ModelStateInfer<TModel>;
+  mergeState(state: ModelStateInfer<TModel> & ModelChildStateInfer<TModel>): void;
   dispatch<TPayload, TResult>(
     action: Action<TModel, TPayload, TResult>,
     payload?: TPayload
@@ -100,15 +111,6 @@ export interface DispatchEventArgs<TModel, TPayload = any> {
 
 export type Unsubscribe = () => void;
 
-export interface ModelBase {
-  state?: {};
-  computed?: {};
-  actions?: {};
-  listeners?: {
-    [key: string]: Listener;
-  };
-}
-
 export type Action<TModel = any, TPayload = any, TResult = void> = (
   store?: Store<TModel>,
   payload?: TPayload,
@@ -151,6 +153,12 @@ export type ModelChildrenInfer<TModel> = TModel extends {
   ? { [key in keyof TChildren]: Store<TChildren[key]> }
   : {};
 
+export type ModelChildStateInfer<TModel> = TModel extends {
+  children: infer TChildren;
+}
+  ? { [key in keyof TChildren]: ModelStateInfer<TChildren[key]> }
+  : {};
+
 export type Listener<T = any> = (args?: T, task?: Task) => any;
 
 export interface Cancellable {
@@ -187,4 +195,3 @@ export interface Task extends Cancellable {
 export type CallResultInfer<T> = T extends Promise<infer TResolved>
   ? Promise<TResolved> & Cancellable
   : T;
-

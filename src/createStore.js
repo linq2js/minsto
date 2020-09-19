@@ -1,3 +1,4 @@
+import createNamedFunction from "./createNamedFunction";
 import createArrayKeyedMap from "./createArrayKeyedMap";
 import createEmitter from "./createEmitter";
 import createMatcher from "./createMatcher";
@@ -13,7 +14,6 @@ import ValueWrapper from "./ValueWrapper";
 const undefinedLoadable = new Loadable();
 
 export default function createStore(model = {}, options = {}) {
-  const { parentStore } = options;
   const emitter = createEmitter();
   const selectors = {};
   const loadables = {};
@@ -22,17 +22,17 @@ export default function createStore(model = {}, options = {}) {
   let state = {};
   let notifyChangeTimerId;
   let loading = false;
-  let loadingPromise;
   let loadingError;
   const store = {
     when,
     watch,
     getState,
+    mergeState,
     getPlugins,
     dispatch,
     onChange,
     onDispatch,
-    $,
+    $: dynamicState,
     mutate,
     // compatible with redux
     subscribe,
@@ -45,18 +45,50 @@ export default function createStore(model = {}, options = {}) {
     },
   };
 
+  function initChildren() {
+    if (!model.children) return;
+    processEntries(model.children, ([childName, childModel]) => {
+      const isolate = childName.charAt(0) === "$" || childModel.isolate;
+      const childStore = createStore(childModel, {
+        initial: isolate ? undefined : state[childName],
+        parent: store,
+      });
+      children[childName] = childStore;
+      // child store is isolated if its name starts with dynamicProp (this can be controlled by parent store)
+      // or its model.isolate is true (this can be controlled by store factory util)
+
+      if (!isolate) {
+        state[childName] = childStore.getState();
+        childStore.onChange(() => {
+          const pluginState = childStore.getState();
+          mutate(childName, pluginState);
+        });
+      }
+      defProp(store, childName, childStore, false);
+    });
+  }
+
+  function processEntries(target, callback) {
+    Object.entries(target).forEach((x, index) => {
+      if (process.env.NODE_ENV !== "production") {
+        if (x[0] in store) {
+          throw new Error("Prop " + x[0] + " is in use");
+        }
+      }
+      return callback(x, index);
+    });
+  }
+
   if (model.state) {
-    Object.entries(model.state).forEach(([propName, defaultValue]) => {
-      state[propName] =
-        defaultValue instanceof ValueWrapper
-          ? defaultValue.value
-          : defaultValue;
+    processEntries(model.state, ([propName, defaultValue]) => {
+      state[propName] = undefined;
+
       const get = () => {
         const sc = selectContext();
         if (sc) {
           if (loading) {
             if (loadingError) throw loadingError;
-            throw loadingPromise;
+            throw store.__loadingPromise;
           }
           const loadable = loadables[propName];
           if (loadable) {
@@ -74,14 +106,19 @@ export default function createStore(model = {}, options = {}) {
         },
         enumerable: true,
       });
+
+      dynamicState(propName, defaultValue, true);
     });
   }
 
   if (model.computed) {
-    Object.entries(model.computed).forEach(([propName, computedProp]) => {
+    processEntries(model.computed, ([propName, computedProp]) => {
       const selector = createSelector(computedProp, selectors);
       selectors[propName] = selector;
-      defProp(store, propName, () => selector(state), true);
+      Object.defineProperty(store, propName, {
+        get: () => selector(state),
+        enumerable: false,
+      });
     });
   }
 
@@ -90,17 +127,17 @@ export default function createStore(model = {}, options = {}) {
   }
 
   if (model.actions) {
-    Object.entries(model.actions).forEach(([actionName, actionBody]) => {
+    processEntries(model.actions, ([actionName, actionBody]) => {
       let last;
       const dispatcher = (payload) => {
         const task = createTask({ last });
         last = task;
         return task.call(
           dispatch,
-          {
-            actionType: actionBody.displayName || actionBody.name || actionName,
+          createNamedFunction(
             actionBody,
-          },
+            actionBody.displayName || actionBody.name || actionName
+          ),
           payload
         );
       };
@@ -108,43 +145,48 @@ export default function createStore(model = {}, options = {}) {
     });
   }
 
-  if (model.children) {
-    Object.entries(model.children).forEach(([childName, childModel]) => {
-      const pluginStore = createStore(childModel, { parentStore: store });
-      children[childName] = pluginStore;
-      // child store is isolated if its name starts with $ (this can be controlled by parent store)
-      // or its model.isolate is true (this can be controlled by store factory util)
-      const isolate = childName.charAt(0) === "$" || childModel.isolate;
-      if (!isolate) {
-        state[childName] = pluginStore.getState();
-        pluginStore.onChange(() => {
-          const pluginState = pluginStore.getState();
-          mutate(childName, pluginState);
-        });
-      }
-      defProp(store, childName, pluginStore, false);
-    });
+  if (model.inject) {
+    model.inject(store, state);
   }
 
-  if (model.init) {
-    const initResult = model.init(store, parentStore);
-    if (isPromiseLike(initResult)) {
+  dispatch(function init() {
+    if (model.init) {
       loading = true;
-      loadingPromise = initResult.then(
-        () => {
-          loading = false;
-          loadingPromise = undefined;
-          emitter.emitOnce("ready");
-        },
-        (error) => {
-          loadingError = error;
-          emitter.emitOnce("error", error);
+      let isAsync = false;
+      try {
+        const initResult = model.init(store, {
+          ...options,
+        });
+        if (isPromiseLike(initResult)) {
+          isAsync = true;
+          store.__loadingPromise = initResult.then(
+            () => {
+              loading = false;
+              store.__loadingPromise = undefined;
+              initChildren();
+              emitter.emitOnce("ready");
+            },
+            (error) => {
+              loadingError = error;
+              emitter.emitOnce("error", error);
+            }
+          );
+          return store.__loadingPromise;
         }
-      );
+        initChildren();
+      } catch (error) {
+        loadingError = error;
+        if (!isAsync) throw error;
+      } finally {
+        if (!isAsync) {
+          loading = false;
+        }
+      }
+    } else {
+      initChildren();
+      emitter.emitOnce("ready");
     }
-  } else {
-    emitter.emitOnce("ready");
-  }
+  });
 
   function notifyChange() {
     const dc = dispatchContext();
@@ -157,6 +199,40 @@ export default function createStore(model = {}, options = {}) {
 
   function getState() {
     return state;
+  }
+
+  function mergeState(nextState = {}) {
+    const isDispatching = !!dispatchContext();
+    if (!loading && !isDispatching) {
+      throw new Error(
+        "Cannot call mergeState outside action dispatching or store initializing phase"
+      );
+    }
+    let ownedState = state;
+    Object.keys(state).forEach((key) => {
+      if (state[key] !== nextState[key]) {
+        if (ownedState === state) {
+          ownedState = { ...state };
+        }
+        delete loadables[key];
+        ownedState[key] = nextState[key];
+      }
+    });
+
+    if (loading && model.children) {
+      Object.keys(model.children).forEach((key) => {
+        if (!(key in nextState)) return;
+        if (ownedState === state) {
+          ownedState = { ...state };
+        }
+        ownedState[key] = nextState[key];
+      });
+    }
+
+    if (ownedState !== state) {
+      state = ownedState;
+      notifyChange();
+    }
   }
 
   function getPlugins() {
@@ -175,11 +251,15 @@ export default function createStore(model = {}, options = {}) {
     return loadable;
   }
 
-  function $(prop, value) {
+  function dynamicState(prop, value, skipNotification) {
     // getter
     if (arguments.length < 2) {
       return prop in loadables ? loadables[prop].value : state[prop];
     }
+
+    // if (value instanceof ValueWrapper) {
+    //   value = value.value;
+    // } else
     if (typeof value === "function") {
       value = value(state[prop], loadableOf(prop));
     }
@@ -205,13 +285,13 @@ export default function createStore(model = {}, options = {}) {
           debouncedNotifyChange();
         }
       );
-      notifyChange();
+      !skipNotification && notifyChange();
     } else if (prop in state) {
-      mutate(prop, value);
+      mutate(prop, value, skipNotification);
     } else {
       if (prop in loadables && loadables[prop].value === value) return;
       loadables[prop] = new Loadable(value);
-      notifyChange();
+      !skipNotification && notifyChange();
     }
   }
 
@@ -226,7 +306,7 @@ export default function createStore(model = {}, options = {}) {
     return cache.getOrAdd(keys, () => (...args) => callback(...args));
   }
 
-  function mutate(prop, value) {
+  function mutate(prop, value, skipNotification) {
     delete loadables[prop];
 
     const prev = state[prop];
@@ -237,7 +317,10 @@ export default function createStore(model = {}, options = {}) {
     }
     if (prev !== value) {
       state = { ...state, [prop]: value };
-      notifyChange();
+      if (model.inject) {
+        model.inject(store, state);
+      }
+      !skipNotification && notifyChange();
     }
   }
 
@@ -311,17 +394,12 @@ export default function createStore(model = {}, options = {}) {
     let actionType;
     try {
       if (typeof action === "function") {
-        actionType = action.actionType || action.displayName || action.name;
+        actionType = action.displayName || action.name;
         return action(store, payload);
       } else if (typeof action === "object") {
-        if (arguments.length > 1) {
-          actionType = action.actionType;
-          return action.actionBody(store, payload);
-        } else {
-          // redux compatible
-          const { type, payload } = action;
-          return store[type](payload);
-        }
+        // redux compatible
+        const { type, payload } = action;
+        return store[type](payload);
       }
     } finally {
       dc.scopes--;
@@ -391,16 +469,4 @@ function createEventMatcher(event) {
   if (typeof event === "function")
     return createMatcher(event.displayName || event.name);
   throw new Error("Invalid event type");
-}
-
-function deepCloneObject(obj) {
-  const result = {};
-  Object.entries(obj).forEach(([key, value]) => {
-    if (Array.isArray(value) || typeof value !== "object") {
-      result[key] = value;
-    } else {
-      result[key] = deepCloneObject(value);
-    }
-  });
-  return result;
 }

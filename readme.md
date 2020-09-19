@@ -133,7 +133,72 @@ test("increase", () => {
 1. Hot Reloading supported
 1. Reactotron supported
 
-## Local Store (TBD)
+## Computed Properties
+
+Computed properties are the perfect candidate to help us clean up the more advanced state mapping that is happening within some of our application's components. Let's refactor each derived data case.
+
+First up, let's add a computed property to represent the total todo items.
+
+```jsx harmony
+const todoModel = {
+  state: {
+    todos: [
+      { id: 1, title: "todo 1", completed: false },
+      { id: 2, title: "todo 2", completed: true },
+    ],
+  },
+  computed: {
+    total: (state) => state.todos.length,
+  },
+};
+```
+
+Next up, we will add a computed property to represent the completed todos and active todos.
+
+```jsx harmony
+const todoModel = {
+  state: {
+    todos: [
+      { id: 1, title: "todo 1", completed: false },
+      { id: 2, title: "todo 2", completed: true },
+    ],
+  },
+  computed: {
+    total: (state) => state.todos.length,
+    completed: (state) => state.todos.filter((todo) => todo.completed).length,
+    active: (state) => state.todos.filter((todo) => !todo.completed).length,
+  },
+};
+```
+
+Computed properties optionally allow you to provide an array of state resolver functions as the first argument to the computed property definition.
+These state resolver functions will receive the state that is local to the computed property, as well as the entire store state, and allow you to resolve specific slices of state that your computed function will take as an input.
+
+```jsx harmony
+const todoModel = {
+  state: {
+    todos: [
+      { id: 1, title: "todo 1", completed: false },
+      { id: 2, title: "todo 2", completed: true },
+    ],
+  },
+  computed: {
+    total: (state) => state.todos.length,
+    completed: (state) => state.todos.filter((todo) => todo.completed).length,
+    active: (state) => state.todos.filter((todo) => !todo.completed).length,
+    // show todo list stats
+    stats: [
+      // named computed properties / state resolvers
+      "total",
+      "completed",
+      "active",
+      (total, completed, active) => ({ total, completed, active }),
+    ],
+  },
+};
+```
+
+## Local Store
 
 If you don't want to mess many things into the global state,
 you can use local store to split app logics that used to only specified component.
@@ -148,7 +213,7 @@ const CounterModel = {
     step: 1,
   },
   actions: {
-    increase() {
+    increase(store) {
       store.count += store.step;
     },
   },

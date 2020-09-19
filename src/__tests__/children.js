@@ -6,8 +6,8 @@ function createHistoryPlugin(props) {
       current: undefined,
       entries: [],
     },
-    init(store, parentStore) {
-      parentStore.watch(props, (args) => {
+    init(store, { parent }) {
+      parent.watch(props, (args) => {
         store.push(args.current);
       });
     },

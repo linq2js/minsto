@@ -1,1 +1,4 @@
-export function connectReactotronRedux(enhancer: Function, store: any): void;
+export function connectReactotronRedux(
+  reactotronReduxEnhancer: Function,
+  ...stores: any[]
+): void;

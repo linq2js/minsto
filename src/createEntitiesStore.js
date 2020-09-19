@@ -1,5 +1,4 @@
-import createEntities from "./createEntities";
-import ValueWrapper from "./ValueWrapper";
+import { createEntities, createEntitiesFrom } from "./createEntities";
 
 export default function createEntitiesStore(initial, options) {
   let entities = createEntities(initial, options);
@@ -8,14 +7,30 @@ export default function createEntitiesStore(initial, options) {
     entities = newEntities;
     store.ids = entities.ids;
     store.entities = entities.entities;
-    store.get = new ValueWrapper(entities.get);
   }
 
   return {
+    init(store, { parent, initial }) {
+      if (typeof initial !== "undefined") {
+        mutate(
+          store,
+          createEntitiesFrom(
+            initial.ids || [],
+            initial.entities || {},
+            entities.options()
+          )
+        );
+      }
+    },
     state: {
-      get: entities.get,
       ids: entities.ids,
       entities: entities.entities,
+    },
+    inject(store, state) {
+      Object.defineProperty(state, "get", {
+        value: entities.get,
+        enumerable: false,
+      });
     },
     actions: {
       update(store, inputEntities) {
