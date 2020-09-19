@@ -104,10 +104,20 @@ export default function createStore(model = {}, options = {}) {
       return prop;
     }
 
+    function generateStateResolveAlias(prop) {
+      generateStateResolverIfPossible(prop);
+      if (prop in selectors) {
+        return selectors[prop];
+      }
+      return () => selectors[prop](state, store);
+    }
+
     processEntries(model.computed, ([propName, computedProp]) => {
       const selector =
         typeof computedProp === "function"
           ? computedProp
+          : typeof computedProp === "string"
+          ? generateStateResolveAlias(computedProp)
           : createSelector(
               Array.isArray(computedProp)
                 ? computedProp.map((prop) => {
@@ -144,7 +154,8 @@ export default function createStore(model = {}, options = {}) {
             actionBody,
             actionBody.displayName || actionBody.name || actionName
           ),
-          payload
+          payload,
+          task
         );
       };
       defProp(store, actionName, dispatcher, false);

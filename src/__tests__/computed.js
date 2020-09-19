@@ -13,7 +13,8 @@ const model = {
   computed: {
     sum: ["$a", "$b", (a, b) => a + b],
     doubleSum: ["sum", (sum) => sum * 2],
-    doubleOfDeepObjectValue: ["$deep.object.value", (value) => value * 2],
+    deepObjectValue: "$deep.object.value",
+    deepObjectValue2: "$deep.object.value",
   },
 };
 
@@ -24,5 +25,6 @@ test("computed", () => {
   store.a++;
   expect(store.sum).toBe(4);
   expect(store.doubleSum).toBe(8);
-  expect(store.doubleOfDeepObjectValue).toBe(200);
+  expect(store.deepObjectValue).toBe(100);
+  expect(store.deepObjectValue2).toBe(100);
 });
