@@ -73,3 +73,36 @@ export interface ListStoreModel<TItem> {
     set: Action<ListStoreModel<TItem>, { index: number; value: TItem }>;
   };
 }
+
+export function History<TEntry = any>(
+  prop: string,
+  options?: HistoryStoreOptions<TEntry>
+): HistoryStoreModel<TEntry>;
+
+export function History<TEntry = any>(
+  props: (keyof TEntry)[],
+  options?: HistoryStoreOptions<TEntry>
+): HistoryStoreModel<TEntry>;
+
+export interface HistoryStoreOptions<TEntry> {
+  entries?: TEntry[];
+  index?: number;
+}
+
+export interface HistoryStoreModel<TEntry> {
+  state: {
+    current: TEntry;
+    next: TEntry;
+    prev: TEntry;
+    entries: TEntry[];
+    index: number;
+    prevEntries: TEntry[];
+    nextEntries: TEntry[];
+  };
+  actions: {
+    go: Action<HistoryStoreModel<TEntry>, number, void>;
+    back: Action<HistoryStoreModel<TEntry>, never, void>;
+    forward: Action<HistoryStoreModel<TEntry>, never, void>;
+    clear: Action<HistoryStoreModel<TEntry>, never, void>;
+  };
+}

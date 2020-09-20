@@ -72,9 +72,15 @@ const store = minsto({
 });
 
 const useCounterStore = createStoreHook(store);
+const useCounterStore2 = createStoreHook({
+  state: {
+    count: 0,
+  },
+});
 
 function Component() {
   const count = useCounterStore((store) => store.count);
+  useCounterStore2((store) => store.count);
 }
 //
 // const t1 = createTask();

@@ -53,7 +53,8 @@ export interface StoreBase<TModel> {
   ): Unsubscribe;
   watch<TResult>(
     selector: (state: ModelStateInfer<TModel>) => TResult,
-    callback: Listener<ValueChangeEventArgs<TModel, TResult>>
+    callback: Listener<ValueChangeEventArgs<TModel, TResult>>,
+    options?: WatchOptions
   ): Unsubscribe;
   getState(): ModelStateInfer<TModel>;
   mergeState(
@@ -203,3 +204,7 @@ export interface Task extends Cancellable {
 export type CallResultInfer<T> = T extends Promise<infer TResolved>
   ? Promise<TResolved> & Cancellable
   : T;
+
+export interface WatchOptions {
+  initial: boolean;
+}

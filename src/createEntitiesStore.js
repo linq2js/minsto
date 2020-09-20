@@ -12,8 +12,8 @@ export default function createEntitiesStore(initial, options) {
   return {
     merge(store, state = {}) {
       if (state.ids && state.entities) {
-        mutate(
-          store,
+        store.dispatch(
+          mutate,
           createEntitiesFrom(
             state.ids || [],
             state.entities || {},

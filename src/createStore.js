@@ -9,6 +9,7 @@ import isEqual from "./isEqual";
 import isPromiseLike from "./isPromiseLike";
 import Loadable from "./Loadable";
 import { dispatchContext, selectContext } from "./storeContext";
+import { storeType } from "./types";
 import ValueWrapper from "./ValueWrapper";
 
 const undefinedLoadable = new Loadable();
@@ -24,6 +25,8 @@ export default function createStore(model = {}, options = {}) {
   let loading = false;
   let loadingError;
   const store = {
+    __type: storeType,
+    __model: model,
     when,
     watch,
     getState,
@@ -159,7 +162,17 @@ export default function createStore(model = {}, options = {}) {
           mutate(childName, pluginState);
         });
       }
-      defProp(store, childName, childStore, false);
+      Object.defineProperty(store, childName, {
+        enumerable: false,
+        get() {
+          return childStore;
+        },
+        set(value) {
+          if (!isolate && typeof childModel.merge === "function") {
+            childModel.merge(childStore, value);
+          }
+        },
+      });
     });
   }
 
@@ -464,7 +477,7 @@ export default function createStore(model = {}, options = {}) {
     }
   }
 
-  function watch(selector, callback) {
+  function watch(selector, callback, options = {}) {
     if (Array.isArray(selector)) {
       const props = selector;
       selector = (state) => {
@@ -476,14 +489,21 @@ export default function createStore(model = {}, options = {}) {
       const prop = selector;
       selector = (state) => state[prop];
     }
-    let previous = selector(state);
-    return emitter.on("change", (args) => {
+    let previous;
+
+    const wrapper = (args) => {
       const current = selector(state);
       if (isEqual(current, previous)) return;
       const newArgs = { ...args, current, previous };
       previous = current;
       callback(newArgs);
-    });
+    };
+    if (options.initial) {
+      wrapper({ store, state });
+    } else {
+      previous = selector(state);
+    }
+    return emitter.on("change", wrapper);
   }
 
   function onChange(listener) {

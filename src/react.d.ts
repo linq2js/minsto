@@ -6,11 +6,11 @@ export default function useStore<TModel, TResult>(
 ): TResult;
 
 export function createStoreHook<TModel>(
-  store: Store<TModel>
+  store: Store<TModel> | TModel
 ): StoreHook<TModel>;
 
 export function createStoreHook<TModel, TPayload, TResult>(
-  store: Store<TModel>,
+  store: Store<TModel> | TModel,
   selector: (store: Store<TModel>, payload: TPayload) => TResult
 ): StoreHookWithSelector<TPayload, TResult>;
 
