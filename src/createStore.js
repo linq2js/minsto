@@ -145,18 +145,14 @@ export default function createStore(model = {}, options = {}) {
   if (model.actions) {
     processEntries(model.actions, ([actionName, actionBody]) => {
       let last;
+      const namedAction = createNamedFunction(
+        actionBody,
+        actionBody.displayName || actionBody.name || actionName
+      );
       const dispatcher = (payload) => {
         const task = createTask({ last });
         last = task;
-        return task.call(
-          dispatch,
-          createNamedFunction(
-            actionBody,
-            actionBody.displayName || actionBody.name || actionName
-          ),
-          payload,
-          task
-        );
+        return task.call(dispatch, namedAction, payload, task);
       };
       defProp(store, actionName, dispatcher, false);
     });
@@ -307,12 +303,20 @@ export default function createStore(model = {}, options = {}) {
       // getter
       if (arguments.length < 2) {
         const prop = arguments[0];
-        return prop in loadables ? loadables[prop].value : state[prop];
+        const loadable = loadableOf(prop);
+        const sc = selectContext();
+        if (sc) {
+          if (loadable.hasError) throw loadable.error;
+          if (loadable.loading) throw loadable.promise;
+        }
+        return loadable.value;
       }
+      // single prop setter
       const [prop, value, skipNotification] = arguments;
       return dynamicState({ [prop]: value }, skipNotification);
     }
     const [props, skipNotification] = arguments;
+    const promises = [];
     let hasChange = false;
     Object.entries(props).forEach(([prop, value]) => {
       if (typeof value === "function") {
@@ -321,6 +325,7 @@ export default function createStore(model = {}, options = {}) {
       // setter
       if (isPromiseLike(value)) {
         const promise = value;
+        promises.push(promise);
         if (prop in loadables && loadables[prop].promise === promise) return;
         const loadable = (loadables[prop] = new Loadable(promise));
 
@@ -353,6 +358,12 @@ export default function createStore(model = {}, options = {}) {
     if (hasChange && !skipNotification) {
       notifyChange();
     }
+
+    return promises.length
+      ? promises.length === 1
+        ? promises[0]
+        : Promise.all(promises)
+      : undefined;
   }
 
   function debouncedNotifyChange() {
