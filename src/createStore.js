@@ -45,6 +45,19 @@ export default function createStore(model = {}, options = {}) {
     },
   };
 
+  function selectorResolver(name) {
+    let resolvedSelector = selectors[name];
+    if (resolvedSelector) return resolvedSelector;
+    if (name.charAt(0) !== "$") return undefined;
+    const parts = name.substr(1).split(".");
+    if (parts.length === 1) {
+      const stateProp = parts[0];
+      return (selectors[name] = (state) => state[stateProp]);
+    }
+    return (selectors[name] = (state) =>
+      parts.reduce((obj, part) => obj[part], state));
+  }
+
   function processEntries(target, callback) {
     Object.entries(target).forEach((x, index) => {
       if (process.env.NODE_ENV !== "production") {
@@ -89,47 +102,8 @@ export default function createStore(model = {}, options = {}) {
   }
 
   if (model.computed) {
-    function generateStateResolverIfPossible(prop) {
-      if (prop.charAt(0) !== "$" || prop in selectors) {
-        return prop;
-      }
-      const parts = prop.substr(1).split(".");
-      if (parts.length === 1) {
-        const stateProp = parts[0];
-        selectors[prop] = (state) => state[stateProp];
-      } else {
-        selectors[prop] = (state) =>
-          parts.reduce((obj, part) => obj[part], state);
-      }
-      return prop;
-    }
-
-    function generateStateResolveAlias(prop) {
-      generateStateResolverIfPossible(prop);
-      if (prop in selectors) {
-        return selectors[prop];
-      }
-      return () => selectors[prop](state, store);
-    }
-
     processEntries(model.computed, ([propName, computedProp]) => {
-      const selector =
-        typeof computedProp === "function"
-          ? computedProp
-          : typeof computedProp === "string"
-          ? generateStateResolveAlias(computedProp)
-          : createSelector(
-              Array.isArray(computedProp)
-                ? computedProp.map((prop) => {
-                    // is state resolver
-                    if (typeof prop === "string") {
-                      generateStateResolverIfPossible(prop);
-                    }
-                    return prop;
-                  })
-                : computedProp,
-              selectors
-            );
+      const selector = createSelector(computedProp, selectorResolver);
       selectors[propName] = selector;
       Object.defineProperty(store, propName, {
         get: () => selector(state, store),
@@ -183,41 +157,39 @@ export default function createStore(model = {}, options = {}) {
     });
   }
 
-  dispatch(function init() {
-    if (model.init) {
-      loading = true;
-      let isAsync = false;
-      try {
-        const initResult = model.init(store, {
-          ...options,
-        });
-        if (isPromiseLike(initResult)) {
-          isAsync = true;
-          store.__loadingPromise = initResult.then(
-            () => {
-              loading = false;
-              store.__loadingPromise = undefined;
-              emitter.emitOnce("ready");
-            },
-            (error) => {
-              loadingError = error;
-              emitter.emitOnce("error", error);
-            }
-          );
-          return store.__loadingPromise;
-        }
-      } catch (error) {
-        loadingError = error;
-        if (!isAsync) throw error;
-      } finally {
-        if (!isAsync) {
-          loading = false;
-        }
+  if (model.init) {
+    loading = true;
+    let isAsync = false;
+    try {
+      const initResult = dispatch(model.init, {
+        ...options,
+      });
+
+      if (isPromiseLike(initResult)) {
+        isAsync = true;
+        store.__loadingPromise = initResult.then(
+          () => {
+            loading = false;
+            store.__loadingPromise = undefined;
+            emitter.emitOnce("ready");
+          },
+          (error) => {
+            loadingError = error;
+            emitter.emitOnce("error", error);
+          }
+        );
       }
-    } else {
-      emitter.emitOnce("ready");
+    } catch (error) {
+      loadingError = error;
+      if (!isAsync) throw error;
+    } finally {
+      if (!isAsync) {
+        loading = false;
+      }
     }
-  });
+  } else {
+    emitter.emitOnce("ready");
+  }
 
   function notifyChange() {
     const dc = dispatchContext();
