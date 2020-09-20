@@ -17,10 +17,12 @@ beforeEach(() => {
 test("push", () => {
   store.todos.update({ id: 1 });
   expect(store.history.entries).toEqual([
+    { ids: [], entities: {} },
     { ids: [1], entities: { 1: { id: 1 } } },
   ]);
   store.todos.update({ id: 2 });
   expect(store.history.entries).toEqual([
+    { ids: [], entities: {} },
     { ids: [1], entities: { 1: { id: 1 } } },
     { ids: [1, 2], entities: { 1: { id: 1 }, 2: { id: 2 } } },
   ]);

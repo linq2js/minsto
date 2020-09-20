@@ -66,17 +66,17 @@ export default function createHistoryStore(
         { initial }
       );
 
-      function __revert() {
-        reverting = true;
-        if (isSingle) {
-          parent[props[0]] = store.current;
-        } else {
-          Object.assign(parent, store.current);
-        }
-      }
-
       store.__revert = () => {
-        parent.dispatch(__revert);
+        parent.dispatch(() => {
+          {
+            reverting = true;
+            if (isSingle) {
+              parent[props[0]] = store.current;
+            } else {
+              Object.assign(parent, store.current);
+            }
+          }
+        });
       };
     },
   };
