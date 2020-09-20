@@ -48,7 +48,7 @@ export default function createStore(model = {}, options = {}) {
   function selectorResolver(name) {
     let resolvedSelector = selectors[name];
     if (resolvedSelector) return resolvedSelector;
-    if (name.charAt(0) !== "$") return undefined;
+    if (name.charAt(0) !== "@") return undefined;
     const parts = name.substr(1).split(".");
     if (parts.length === 1) {
       const stateProp = parts[0];

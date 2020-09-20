@@ -13,12 +13,12 @@ const model = {
     },
   },
   computed: {
-    sum: ["$a", "$b", (a, b) => a + b],
+    sum: ["@a", "@b", (a, b) => a + b],
     doubleSum: ["sum", (sum) => sum * 2],
-    deepObjectValue: "$deep.object.value",
-    deepObjectValue2: "$deep.object.value",
-    bc: { bv: "$b", cv: "$c" },
-    todoTitles: "$todos.get.titles",
+    deepObjectValue: "@deep.object.value",
+    deepObjectValue2: "@deep.object.value",
+    bc: { bv: "@b", cv: "@c" },
+    todoTitles: "@todos.get.titles",
   },
   children: {
     todos: Entities(
