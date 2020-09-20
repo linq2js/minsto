@@ -1,3 +1,4 @@
+import { Entities } from "../extras";
 import minsto from "../index";
 
 const model = {
@@ -17,6 +18,20 @@ const model = {
     deepObjectValue: "$deep.object.value",
     deepObjectValue2: "$deep.object.value",
     bc: { bv: "$b", cv: "$c" },
+    todoTitles: "$todos.get.titles",
+  },
+  children: {
+    todos: Entities(
+      [
+        { id: 1, title: "item 1" },
+        { id: 2, title: "item 2" },
+      ],
+      {
+        slice: {
+          titles: (todo) => todo.title,
+        },
+      }
+    ),
   },
 };
 
@@ -33,4 +48,5 @@ test("computed", () => {
   expect(store.deepObjectValue2).toBe(100);
   const nextBc = store.bc;
   expect(nextBc).toBe(prevBc);
+  expect(store.todoTitles).toEqual({ 1: "item 1", 2: "item 2" });
 });

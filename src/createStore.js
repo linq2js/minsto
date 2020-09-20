@@ -55,7 +55,10 @@ export default function createStore(model = {}, options = {}) {
       return (selectors[name] = (state) => state[stateProp]);
     }
     return (selectors[name] = (state) =>
-      parts.reduce((obj, part) => obj[part], state));
+      parts.reduce(
+        (obj, part) => (typeof obj === "function" ? obj(part) : obj[part]),
+        state
+      ));
   }
 
   function processEntries(target, callback) {
