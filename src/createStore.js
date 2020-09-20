@@ -108,10 +108,13 @@ export default function createStore(model = {}, options = {}) {
     processEntries(model.computed, ([propName, computedProp]) => {
       const selector = createSelector(computedProp, selectorResolver);
       selectors[propName] = selector;
-      Object.defineProperty(store, propName, {
-        get: () => selector(state, store),
-        enumerable: false,
-      });
+      // is public
+      if (propName.charAt(0) !== "_") {
+        Object.defineProperty(store, propName, {
+          get: () => selector(state, store),
+          enumerable: false,
+        });
+      }
     });
   }
 
@@ -350,7 +353,10 @@ export default function createStore(model = {}, options = {}) {
     if (!keys.length) return callback;
     const sc = selectContext();
     const cache = sc ? sc.cache : defaultCallbackCache;
-    return cache.getOrAdd(keys, () => (...args) => callback(...args));
+    if (typeof cache.index === "number") {
+      keys.unshift(cache.index++);
+    }
+    return cache.getOrAdd(keys, () => callback);
   }
 
   function mutate(prop, value, skipNotification) {

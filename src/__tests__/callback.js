@@ -1,5 +1,5 @@
 import { act, render } from "@testing-library/react";
-import React, { memo } from "react";
+import React, { memo, useRef } from "react";
 import createTask from "../createTask";
 import minsto from "../index";
 import useStore from "../react";
@@ -19,32 +19,23 @@ const cartModel = {
 
 const { delay } = createTask();
 
-test("callback using store cache", () => {
-  const store = minsto({});
-  const increase1 = store.callback((value) => value, 1);
-  const increase2 = store.callback((value) => value, 1);
-  const increase3 = store.callback((value) => value, 2);
-  const increase4 = store.callback((value) => value, 2);
-  const increase5 = store.callback((value) => value, 2, 3);
-  const increase6 = store.callback((value) => value, 2, 3);
-
-  expect(increase1).toBe(increase2);
-  expect(increase1).not.toBe(increase3);
-  expect(increase3).toBe(increase4);
-  expect(increase5).toBe(increase6);
-});
-
 test("using cached callback to handle element event", async () => {
   const cartStore = minsto(cartModel);
+  const callbackChanged = jest.fn();
   const renderCallback = jest.fn();
   const Product = memo(({ id }) => {
     //                👆
+    const currentCallbackRef = useRef(undefined);
     const { onAdd } = useStore(cartStore, (store) => {
       return {
         onAdd: store.callback(() => store.add(id), id),
         //                                          👆
       };
     });
+    if (currentCallbackRef.current && currentCallbackRef.current !== onAdd) {
+      callbackChanged();
+    }
+    currentCallbackRef.current = onAdd;
     renderCallback();
     return (
       <button onClick={onAdd} data-testid="add">
@@ -77,6 +68,6 @@ test("using cached callback to handle element event", async () => {
   act(() => {
     cartStore.id = 2;
   });
-
+  expect(callbackChanged).toBeCalledTimes(1);
   expect(renderCallback).toBeCalledTimes(2);
 });

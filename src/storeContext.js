@@ -3,7 +3,7 @@ const contexts = {};
 function createContext(name) {
   return function () {
     if (arguments.length) {
-      contexts[name] = arguments[0];
+      return contexts[name] = arguments[0];
     } else {
       return contexts[name];
     }

@@ -30,8 +30,9 @@ export default function useStore(store, selector) {
         }
         throw data.store.__loadingPromise;
       }
+      let context;
       try {
-        selectContext({
+        context = selectContext({
           get cache() {
             if (!data.cache) {
               data.cache = createArrayKeyedMap();
@@ -39,8 +40,16 @@ export default function useStore(store, selector) {
             return data.cache;
           },
         });
+        context.cache.index = 0;
         return data.selector(data.store);
       } finally {
+        if (
+          typeof data.prevCacheIndex === "number" &&
+          data.prevCacheIndex !== context.cache.index
+        ) {
+          data.error = new Error("Number of callbacks is changed");
+        }
+        data.prevCacheIndex = context.cache.index;
         selectContext(undefined);
       }
     };
