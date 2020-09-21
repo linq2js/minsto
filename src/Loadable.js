@@ -2,7 +2,8 @@ import ErrorWrapper from "./ErrorWrapper";
 import isPromiseLike from "./isPromiseLike";
 
 export default class Loadable {
-  constructor(value) {
+  constructor(value, promise) {
+    this.promise = promise;
     if (isPromiseLike(value)) {
       this.promise = value;
       this.status = "loading";

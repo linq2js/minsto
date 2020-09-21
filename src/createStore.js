@@ -68,10 +68,14 @@ export default function createStore(model = {}, options = {}) {
       const cc = computedContext();
       return parts.reduce((obj, part) => {
         // this trick works with isolate store
-        if (cc && obj && obj.__type === storeType && obj.__model.isolate) {
-          const index = cc.getArgIndex(obj);
-          if (typeof index === "number") {
-            return args[index][part];
+        if (cc && obj && obj.__type === storeType) {
+          if (obj.__model.isolate) {
+            const index = cc.getArgIndex(obj);
+            if (typeof index === "number") {
+              return args[index][part];
+            }
+          } else {
+            obj = obj.getState();
           }
         }
         return typeof obj === "function" ? obj(part) : obj[part];
@@ -146,7 +150,12 @@ export default function createStore(model = {}, options = {}) {
               if (dependencyArray.length) {
                 args.push(...dependencyArray.map((store) => store.getState()));
               }
-              return selector(...args);
+              const result = selector(...args);
+              if (isPromiseLike(result)) {
+                dynamicState(propName, result);
+                return dynamicState(propName);
+              }
+              return result;
             } finally {
               computedContext(undefined);
             }
@@ -386,14 +395,14 @@ export default function createStore(model = {}, options = {}) {
             if (prop in state) {
               mutate(prop, payload);
             } else {
-              loadables[prop] = new Loadable(payload);
+              loadables[prop] = new Loadable(payload, promise);
               debouncedNotifyChange();
             }
           },
           (error) => {
             // prop has been changed
             if (loadables[prop] !== loadable) return;
-            loadables[prop] = new Loadable(new ErrorWrapper(error));
+            loadables[prop] = new Loadable(new ErrorWrapper(error), promise);
             debouncedNotifyChange();
           }
         );
