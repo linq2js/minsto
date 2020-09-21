@@ -35,7 +35,9 @@ export default function createStore(model = {}, options = {}) {
     dispatch,
     onChange,
     onDispatch,
+    loadableOf,
     $: dynamicState,
+    lock,
     mutate,
     // compatible with redux
     subscribe,
@@ -289,9 +291,23 @@ export default function createStore(model = {}, options = {}) {
     return loadable;
   }
 
+  function lock(props, promise) {
+    if (!Array.isArray(props)) {
+      props = [props];
+    }
+    const obj = {};
+    props.forEach((prop) => {
+      obj[prop] = promise.then(() => {
+        return state[prop];
+      });
+    });
+    props.length && promise.finally(debouncedNotifyChange);
+    return dynamicState(obj);
+  }
+
   function dynamicState() {
     if (typeof arguments[0] !== "object") {
-      // getter
+      // dynamicState(prop)
       if (arguments.length < 2) {
         const prop = arguments[0];
         const loadable = loadableOf(prop);
@@ -303,9 +319,11 @@ export default function createStore(model = {}, options = {}) {
         return loadable.value;
       }
       // single prop setter
+      // dynamicState(prop, value)
       const [prop, value, skipNotification] = arguments;
       return dynamicState({ [prop]: value }, skipNotification);
     }
+    // dynamicState({ prop1: value1, prop2: value2 }, skipNotification)
     const [props, skipNotification] = arguments;
     const promises = [];
     let hasChange = false;
@@ -322,6 +340,7 @@ export default function createStore(model = {}, options = {}) {
 
         promise.then(
           (payload) => {
+            // prop has been changed
             if (loadables[prop] !== loadable) return;
             if (prop in state) {
               mutate(prop, payload);
@@ -331,6 +350,7 @@ export default function createStore(model = {}, options = {}) {
             }
           },
           (error) => {
+            // prop has been changed
             if (loadables[prop] !== loadable) return;
             loadables[prop] = new Loadable(new ErrorWrapper(error));
             debouncedNotifyChange();

@@ -74,6 +74,10 @@ export interface StoreBase<TModel> {
     prop: string,
     value: ((value: any, loadable?: Loadable<any>) => any) | any
   ): void;
+  lock<T>(
+    props: keyof TModel | string | (string | keyof TModel)[],
+    promise: Promise<T>
+  ): void;
   mutate<
     TKey extends keyof ModelStateInfer<TModel>,
     TValue extends ModelStateInfer<TModel>[TKey]
