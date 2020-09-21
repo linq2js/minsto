@@ -111,6 +111,6 @@ export interface HistoryStoreModel<TEntry> {
     go: Action<HistoryStoreModel<TEntry>, number, void>;
     back: Action<HistoryStoreModel<TEntry>, never, void>;
     forward: Action<HistoryStoreModel<TEntry>, never, void>;
-    clear: Action<HistoryStoreModel<TEntry>, never, void>;
+    clear: Action<HistoryStoreModel<TEntry>, boolean, void>;
   };
 }

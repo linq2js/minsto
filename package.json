@@ -1,6 +1,6 @@
 {
   "name": "minsto",
-  "version": "1.1.20",
+  "version": "1.1.21",
   "description": "A mini store for javascript/React app",
   "main": "dist/index.js",
   "types": "src/index.d.ts",
@@ -14,6 +14,11 @@
     "react",
     "extras",
     "reactotron",
+    "redux",
+    "flux",
+    "state management",
+    "flux store",
+    "store",
     "src"
   ],
   "bugs": {

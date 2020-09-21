@@ -3,6 +3,7 @@ import createArrayKeyedMap from "./createArrayKeyedMap";
 import isEqual from "./isEqual";
 import isPromiseLike from "./isPromiseLike";
 import { selectContext } from "./storeContext";
+import { storeType } from "./types";
 
 export default function useStore(store, selector) {
   if (!selector) throw new Error("selector required");
@@ -19,6 +20,8 @@ export default function useStore(store, selector) {
     data.storeLoadingHandled = false;
     delete data.cache;
     delete data.error;
+    data.childStores = new WeakMap();
+    data.childStores.array = [];
     data.select = () => {
       if (data.store.loading) {
         if (data.store.error) {
@@ -39,6 +42,14 @@ export default function useStore(store, selector) {
             }
             return data.cache;
           },
+          addChildStore(childStore) {
+            if (data.childStores.has(childStore)) return;
+            data.childStores.set(
+              childStore,
+              childStore.onChange(data.handleChange)
+            );
+            data.childStores.array.push(childStore);
+          },
         });
         context.cache.index = 0;
         return data.selector(data.store);
@@ -57,7 +68,8 @@ export default function useStore(store, selector) {
       data.error = undefined;
       try {
         const next = data.select();
-        if (next !== data.store && isEqual(next, data.prev)) {
+        const isStore = next && next.__type === storeType;
+        if (!isStore && isEqual(next, data.prev)) {
           return;
         }
       } catch (e) {
@@ -74,7 +86,13 @@ export default function useStore(store, selector) {
     };
   }
   useEffect(() => {
-    return data.store.onChange(data.handleChange);
+    const unsubscribe = data.store.onChange(data.handleChange);
+    return function () {
+      unsubscribe();
+      data.childStores.array.forEach((childStore) =>
+        data.childStores.get(childStore)()
+      );
+    };
   }, [data, store]);
 
   if (data.error) throw data.error;

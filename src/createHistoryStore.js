@@ -18,15 +18,21 @@ export default function createHistoryStore(
       next: (state) => state.entries[state.index + 1],
       prev: (state) => state.entries[state.index - 1],
       prevEntries: (state) =>
-        state.entries.length ? state.entries.slice(0, index) : [],
+        state.entries.length ? state.entries.slice(0, state.index) : [],
       nextEntries: (state) =>
-        state.entries.length ? state.entries.slice(index + 1) : [],
+        state.entries.length ? state.entries.slice(state.index + 1) : [],
       length: (state) => state.entries.length,
     },
     actions: {
-      clear(store) {
-        store.entries = [];
-        store.index = -1;
+      clear(store, keepCurrent) {
+        if (!store.entries.length) return;
+        if (keepCurrent) {
+          store.entries = [store.current];
+          store.index = 0;
+        } else {
+          store.entries = [];
+          store.index = -1;
+        }
       },
       push(store, entry) {
         store.entries = store.entries.slice(0, store.index + 1).concat(entry);

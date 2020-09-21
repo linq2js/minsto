@@ -8,7 +8,11 @@ import ErrorWrapper from "./ErrorWrapper";
 import isEqual from "./isEqual";
 import isPromiseLike from "./isPromiseLike";
 import Loadable from "./Loadable";
-import { dispatchContext, selectContext } from "./storeContext";
+import {
+  computedContext,
+  dispatchContext,
+  selectContext,
+} from "./storeContext";
 import { storeType } from "./types";
 import ValueWrapper from "./ValueWrapper";
 
@@ -59,11 +63,20 @@ export default function createStore(model = {}, options = {}) {
       const stateProp = parts[0];
       return (selectors[name] = (state) => state[stateProp]);
     }
-    return (selectors[name] = (state) =>
-      parts.reduce(
-        (obj, part) => (typeof obj === "function" ? obj(part) : obj[part]),
-        state
-      ));
+    return (selectors[name] = function (state, store) {
+      const args = arguments;
+      const cc = computedContext();
+      return parts.reduce((obj, part) => {
+        // this trick works with isolate store
+        if (cc && obj && obj.__type === storeType && obj.__model.isolate) {
+          const index = cc.getArgIndex(obj);
+          if (typeof index === "number") {
+            return args[index][part];
+          }
+        }
+        return typeof obj === "function" ? obj(part) : obj[part];
+      }, store);
+    });
   }
 
   function processEntries(target, callback) {
@@ -96,7 +109,6 @@ export default function createStore(model = {}, options = {}) {
         }
         return state[propName];
       };
-      // selectors["$" + propName] = get;
       Object.defineProperty(store, propName, {
         get,
         set(value) {
@@ -115,8 +127,30 @@ export default function createStore(model = {}, options = {}) {
       selectors[propName] = selector;
       // is public
       if (propName.charAt(0) !== "_") {
+        const dependencyStoreMap = new WeakMap();
+        const dependencyArray = [];
         Object.defineProperty(store, propName, {
-          get: () => selector(state, store),
+          get: () => {
+            const args = [state, store];
+            try {
+              computedContext({
+                getArgIndex(store) {
+                  const index = dependencyStoreMap.get(store);
+                  if (typeof index === "number") return index;
+                  // set dependency state argument index (skip 2 first args)
+                  dependencyStoreMap.set(store, 2 + dependencyArray.length);
+                  dependencyArray.push(store);
+                  return undefined;
+                },
+              });
+              if (dependencyArray.length) {
+                args.push(...dependencyArray.map((store) => store.getState()));
+              }
+              return selector(...args);
+            } finally {
+              computedContext(undefined);
+            }
+          },
           enumerable: false,
         });
       }
@@ -150,9 +184,12 @@ export default function createStore(model = {}, options = {}) {
   if (model.children) {
     processEntries(model.children, ([childName, childModel]) => {
       const isolate = childName.charAt(0) === "$" || childModel.isolate;
-      const childStore = createStore(childModel, {
-        parent: store,
-      });
+      const childStore = createStore(
+        { ...childModel, isolate },
+        {
+          parent: store,
+        }
+      );
       children[childName] = childStore;
       // child store is isolated if its name starts with dynamicProp (this can be controlled by parent store)
       // or its model.isolate is true (this can be controlled by store factory util)
@@ -167,6 +204,10 @@ export default function createStore(model = {}, options = {}) {
       Object.defineProperty(store, childName, {
         enumerable: false,
         get() {
+          const sc = selectContext();
+          if (sc) {
+            sc.addChildStore(childStore);
+          }
           return childStore;
         },
         set(value) {
