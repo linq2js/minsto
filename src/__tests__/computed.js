@@ -65,12 +65,18 @@ test("async computed", async () => {
     },
     computed: {
       sum: ["@a", "@b", (a, b) => delay(10, a + b)],
+      double: [
+        "sum",
+        async (sum) => {
+          return (await sum) * 2;
+        },
+      ],
     },
   });
 
   const App = () => {
-    const sum = useStore(store, (store) => store.sum);
-    return <h1 data-testid="value">{sum}</h1>;
+    const double = useStore(store, (store) => store.double);
+    return <h1 data-testid="value">{double}</h1>;
   };
 
   const { findByTestId } = render(
@@ -84,7 +90,7 @@ test("async computed", async () => {
   await expect(findByTestId("loading")).rejects.toThrowError();
   await expect(
     findByTestId("value").then((result) => result.innerHTML)
-  ).resolves.toBe("3");
+  ).resolves.toBe("6");
 
   await Promise.race([
     act(() => {
@@ -98,5 +104,5 @@ test("async computed", async () => {
   await expect(findByTestId("loading")).rejects.toThrowError();
   await expect(
     findByTestId("value").then((result) => result.innerHTML)
-  ).resolves.toBe("4");
+  ).resolves.toBe("8");
 });

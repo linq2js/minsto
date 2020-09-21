@@ -67,8 +67,8 @@ export default function createStore(model = {}, options = {}) {
       const args = arguments;
       const cc = computedContext();
       return parts.reduce((obj, part) => {
-        // this trick works with isolate store
         if (cc && obj && obj.__type === storeType) {
+          // this trick works with isolate store
           if (obj.__model.isolate) {
             const index = cc.getArgIndex(obj);
             if (typeof index === "number") {
@@ -82,6 +82,19 @@ export default function createStore(model = {}, options = {}) {
       }, store);
     });
   }
+
+  Object.assign(selectorResolver, {
+    thunk(fn, lastResult, lastArgs) {
+      const task = createTask({ last: lastResult && lastResult.__task });
+      const result = fn(task);
+      if (isPromiseLike(result)) {
+        return Object.assign(task.wrap(result), {
+          __task: task,
+        });
+      }
+      return result;
+    },
+  });
 
   function processEntries(target, callback) {
     Object.entries(target).forEach((x, index) => {

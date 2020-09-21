@@ -1,6 +1,6 @@
 import { selectorType, unset } from "./types";
 
-export default function createSelector(selector, selectorResolver) {
+export default function createSelector(selector, resolver) {
   if (typeof selector === "function") {
     if (selector.__type === selectorType) return selector;
 
@@ -9,8 +9,24 @@ export default function createSelector(selector, selectorResolver) {
     return Object.assign(
       function (...args) {
         if (!lastArgs || lastArgs.some((arg, index) => args[index] !== arg)) {
-          lastArgs = args;
-          lastResult = selector(...args);
+          try {
+            const result = selector(...args);
+            if (typeof result === "function") {
+              if (typeof resolver.thunk === "function") {
+                lastResult = resolver.thunk(
+                  result,
+                  lastResult,
+                  lastArgs
+                );
+              } else {
+                lastResult = result(lastResult, lastArgs);
+              }
+            } else {
+              lastResult = result;
+            }
+          } finally {
+            lastArgs = args;
+          }
         }
         return lastResult;
       },
@@ -23,7 +39,7 @@ export default function createSelector(selector, selectorResolver) {
     let runtimeSelector = unset;
     return function () {
       if (runtimeSelector === unset) {
-        runtimeSelector = selectorResolver(selector);
+        runtimeSelector = resolver(selector);
       }
       if (!runtimeSelector)
         throw new Error("No named selector " + selector + " found");
@@ -35,7 +51,7 @@ export default function createSelector(selector, selectorResolver) {
     const combiner = selector[selector.length - 1];
     const selectors = selector
       .slice(0, selector.length - 1)
-      .map((s) => createSelector(s, selectorResolver));
+      .map((s) => createSelector(s, resolver));
     const wrappedCombiner = createSelector(combiner);
     return createSelector(function () {
       return wrappedCombiner(...selectors.map((s) => s(...arguments)));
@@ -45,7 +61,7 @@ export default function createSelector(selector, selectorResolver) {
   if (typeof selector === "object") {
     const entries = Object.entries(selector).map(([key, subSelector]) => [
       key,
-      createSelector(subSelector, selectorResolver),
+      createSelector(subSelector, resolver),
     ]);
     let prev;
     return createSelector(function () {
