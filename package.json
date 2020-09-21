@@ -1,12 +1,12 @@
 {
   "name": "minsto",
-  "version": "1.1.15",
+  "version": "1.1.19",
   "description": "A mini store for javascript/React app",
   "main": "dist/index.js",
   "types": "src/index.d.ts",
   "scripts": {
     "test": "jest --runInBand --detectOpenHandles",
-    "build": "babel src --out-dir dist --source-maps --ignore '**/*.test.js'",
+    "build": "babel src --out-dir dist --source-maps --ignore '**/*.test.js',src/__tests__",
     "_publish": "npm run test && npm run build && npm publish"
   },
   "files": [

@@ -363,13 +363,16 @@ export default function createStore(model = {}, options = {}) {
   }
 
   function createCallback(callback, ...keys) {
-    if (!keys.length) return callback;
     const sc = selectContext();
     const cache = sc ? sc.cache : defaultCallbackCache;
     if (typeof cache.index === "number") {
       keys.unshift(cache.index++);
+    } else if (!keys.length) {
+      return callback;
     }
-    return cache.getOrAdd(keys, () => callback);
+    return cache.getOrAdd(keys, () => {
+      return callback;
+    });
   }
 
   function mutate(prop, value, skipNotification) {

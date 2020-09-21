@@ -57,7 +57,9 @@ export default function useStore(store, selector) {
       data.error = undefined;
       try {
         const next = data.select();
-        if (next !== data.store && isEqual(next, data.prev)) return;
+        if (next !== data.store && isEqual(next, data.prev)) {
+          return;
+        }
       } catch (e) {
         if (isPromiseLike(e)) {
           if (e === data.store.__loadingPromise) {
@@ -71,7 +73,9 @@ export default function useStore(store, selector) {
       data.rerender({});
     };
   }
-  useEffect(() => data.store.onChange(data.handleChange), [data, store]);
+  useEffect(() => {
+    return data.store.onChange(data.handleChange);
+  }, [data, store]);
 
   if (data.error) throw data.error;
   data.prev = data.select();

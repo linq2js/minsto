@@ -1,16 +1,23 @@
-import { unset } from "./types";
+import { selectorType, unset } from "./types";
 
 export default function createSelector(selector, selectorResolver) {
   if (typeof selector === "function") {
+    if (selector.__type === selectorType) return selector;
+
     let lastArgs;
     let lastResult;
-    return function (...args) {
-      if (!lastArgs || lastArgs.some((arg, index) => args[index] !== arg)) {
-        lastArgs = args;
-        lastResult = selector(...args);
+    return Object.assign(
+      function (...args) {
+        if (!lastArgs || lastArgs.some((arg, index) => args[index] !== arg)) {
+          lastArgs = args;
+          lastResult = selector(...args);
+        }
+        return lastResult;
+      },
+      {
+        __type: selectorType,
       }
-      return lastResult;
-    };
+    );
   }
   if (typeof selector === "string") {
     let runtimeSelector = unset;
@@ -29,8 +36,9 @@ export default function createSelector(selector, selectorResolver) {
     const selectors = selector
       .slice(0, selector.length - 1)
       .map((s) => createSelector(s, selectorResolver));
+    const wrappedCombiner = createSelector(combiner);
     return createSelector(function () {
-      return combiner(...selectors.map((s) => s(...arguments)));
+      return wrappedCombiner(...selectors.map((s) => s(...arguments)));
     });
   }
 

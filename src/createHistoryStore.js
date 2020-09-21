@@ -1,6 +1,6 @@
 export default function createHistoryStore(
   props,
-  { entries = [], index = -1, initial = true } = {}
+  { entries = [], index = -1, initial = true, isolate = true } = {}
 ) {
   let isSingle = false;
   if (!Array.isArray(props)) {
@@ -8,6 +8,7 @@ export default function createHistoryStore(
     props = [props];
   }
   return {
+    isolate,
     state: {
       entries,
       index,
@@ -68,13 +69,11 @@ export default function createHistoryStore(
 
       store.__revert = () => {
         parent.dispatch(() => {
-          {
-            reverting = true;
-            if (isSingle) {
-              parent[props[0]] = store.current;
-            } else {
-              Object.assign(parent, store.current);
-            }
+          reverting = true;
+          if (isSingle) {
+            parent[props[0]] = store.current;
+          } else {
+            Object.assign(parent, store.current);
           }
         });
       };

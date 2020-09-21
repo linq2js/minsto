@@ -87,6 +87,14 @@ export function History<TEntry = any>(
 export interface HistoryStoreOptions<TEntry> {
   entries?: TEntry[];
   index?: number;
+  /**
+   * indicate the history add current state as first entry (def = true), unless no entry added
+   */
+  initial?: boolean;
+  /**
+   * indicate the history is isolated (def = true)
+   */
+  isolate?: boolean;
 }
 
 export interface HistoryStoreModel<TEntry> {
