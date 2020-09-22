@@ -259,16 +259,10 @@ const counterStore = minsto({
 connectReactotronRedux(storeEnhander, counterStore);
 ```
 
-## Performance
-
-1. [Minsto](https://codesandbox.io/s/minsto-performance-v1-cexjx)
-1. [Redux](https://codesandbox.io/s/will123195redux-performance-56980)
-1. [Stoze](https://codesandbox.io/s/stoze-performance-3q6ib?file=/src/index.js)
-1. [Easy Peasy](https://codesandbox.io/s/easy-peasy-performance-chr7b?file=/src/App.js)
-
 ## Examples
 
 1. [Counter App](https://codesandbox.io/s/minsto-counter-kxem7?file=/src/App.js)
 1. [Counter App using Local Store](https://codesandbox.io/s/minsto-counter-using-local-store-w4u4d?file=/src/App.js)
 1. [Todo App](https://codesandbox.io/s/minsto-todo-app-jbs3s?file=/src/useTodoStore.js)
 1. [Movie Search using Async Computed Prop](https://codesandbox.io/s/minsto-async-computed-prop-3odp6?file=/src/App.js)
+1. [Animation using GSAP](https://codesandbox.io/s/minsto-tween-dwlot?file=/src/App.js)
