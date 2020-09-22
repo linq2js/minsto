@@ -30,7 +30,7 @@ npm install minsto --save
 
 ### Step 1 - Create your store
 
-```jsx harmony
+```jsx
 import minsto from "minsto";
 
 const todoStore = minsto({
@@ -49,7 +49,7 @@ const todoStore = minsto({
 
 ### Step 2 - Use the store
 
-```jsx harmony
+```jsx
 import React, { useRef } from "react";
 import todoStore from "./todoStore";
 import useStore from "minsto/react";
@@ -78,7 +78,7 @@ function TodoList() {
 
 The useStore hook has the following signature.
 
-```jsx harmony
+```jsx
 const result = useStore(CounterStore, (store) => {
   return {
     count: store.count,
@@ -102,7 +102,7 @@ We are going to define two actions on our counterStoreModel;
 one to increase count state, and another to decrease count state.
 Action is pure function that retrieves two arguments (store object and action payload)
 
-```jsx harmony
+```jsx
 const counterStoreModel = {
   state: {
     count: 0,
@@ -121,7 +121,7 @@ const counterStoreModel = {
 
 Because action is pure function, you can write unit test easily
 
-```jsx harmony
+```jsx
 test("increase", () => {
   const state = { count: 0 };
   counterStoreModel.actions.increase(state);
@@ -139,7 +139,7 @@ Computed properties are the perfect candidate to help us clean up the more advan
 
 First up, let's add a computed property to represent the total todo items.
 
-```jsx harmony
+```jsx
 const todoModel = {
   state: {
     todos: [
@@ -155,7 +155,7 @@ const todoModel = {
 
 Next up, we will add a computed property to represent the completed todos and active todos.
 
-```jsx harmony
+```jsx
 const todoModel = {
   state: {
     todos: [
@@ -174,7 +174,7 @@ const todoModel = {
 Computed properties optionally allow you to provide an array of state resolver functions as the first argument to the computed property definition.
 These state resolver functions will receive the state that is local to the computed property, as well as the entire store state, and allow you to resolve specific slices of state that your computed function will take as an input.
 
-```jsx harmony
+```jsx
 const todoModel = {
   state: {
     todos: [
@@ -205,7 +205,7 @@ you can use local store to split app logics that used to only specified componen
 The local store instance stored in host component. It will be removed when its host component is unmounted.
 A host component can contain many local store, local store model can be reused by many components.
 
-```jsx harmony
+```jsx
 import { useLocalStore } from "minsto/react";
 const CounterModel = {
   state: {
@@ -239,7 +239,7 @@ npm install --save-dev reactotron-redux
 
 #### Configuring
 
-```jsx harmony
+```jsx
 import Reactotron from "reactotron";
 import { reactotronRedux } from "reactotron-redux";
 import minsto from "minsto";
