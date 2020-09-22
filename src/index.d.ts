@@ -6,7 +6,8 @@ export type Store<TModel = any> = StoreBase<TModel> &
   ModelChildrenInfer<TModel> &
   ModelActionsInfer<TModel> &
   ModelStateInfer<TModel> &
-  ModelComputedInfer<TModel>;
+  ModelComputedInfer<TModel> &
+  ModelWatchersInfer<TModel>;
 
 export interface StoreModel {
   name?: string;
@@ -16,6 +17,9 @@ export interface StoreModel {
   actions?: {};
   listeners?: {
     [key: string]: Listener;
+  };
+  watchers?: {
+    [key: string]: Listener<ValueChangeEventArgs<any, any>>;
   };
   isolate?: boolean;
   onStateChange?(store?: any, nextState?: any): void | boolean;
@@ -212,3 +216,5 @@ export type CallResultInfer<T> = T extends Promise<infer TResolved>
 export interface WatchOptions {
   initial: boolean;
 }
+
+export type ModelWatchersInfer<TModel> = {};

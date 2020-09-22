@@ -19,12 +19,12 @@ const model = {
     },
   },
   computed: {
-    sum: ["@a", "@b", (a, b) => a + b],
+    sum: ["a", "b", (a, b) => a + b],
     doubleSum: ["sum", (sum) => sum * 2],
-    deepObjectValue: "@deep.object.value",
-    deepObjectValue2: "@deep.object.value",
-    bc: { bv: "@b", cv: "@c" },
-    todoTitles: "@todos.get.titles",
+    deepObjectValue: "deep.object.value",
+    deepObjectValue2: "deep.object.value",
+    bc: { bv: "b", cv: "c" },
+    todoTitles: "todos.get.titles",
   },
   children: {
     todos: Entities(
@@ -64,7 +64,7 @@ test("async computed", async () => {
       b: 2,
     },
     computed: {
-      sum: ["@a", "@b", (a, b) => delay(10, a + b)],
+      sum: ["a", "b", (a, b) => delay(10, a + b)],
       double: [
         "sum",
         async (sum) => {
@@ -80,7 +80,7 @@ test("async computed", async () => {
   };
 
   const { findByTestId } = render(
-    <Suspense fallback={<div data-testid="loading"></div>}>
+    <Suspense fallback={<div data-testid="loading"/>}>
       <App />
     </Suspense>
   );

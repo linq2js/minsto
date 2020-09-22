@@ -57,12 +57,15 @@ export default function createStore(model = {}, options = {}) {
   function selectorResolver(name) {
     let resolvedSelector = selectors[name];
     if (resolvedSelector) return resolvedSelector;
-    if (name.charAt(0) !== "@") return undefined;
-    const parts = name.substr(1).split(".");
+    const parts = name.split(".");
+    // not valid prop name
+    if (!(parts[0] in store)) return;
+
     if (parts.length === 1) {
       const stateProp = parts[0];
-      return (selectors[name] = (state) => state[stateProp]);
+      return (selectors[name] = (state, store) => store[stateProp]);
     }
+
     return (selectors[name] = function (state, store) {
       const args = arguments;
       const cc = computedContext();
@@ -84,7 +87,7 @@ export default function createStore(model = {}, options = {}) {
   }
 
   Object.assign(selectorResolver, {
-    thunk(fn, lastResult, lastArgs) {
+    thunk(fn, lastResult) {
       const task = createTask({ last: lastResult && lastResult.__task });
       const result = fn(task);
       if (isPromiseLike(result)) {
@@ -238,6 +241,17 @@ export default function createStore(model = {}, options = {}) {
           }
         },
       });
+    });
+  }
+
+  if (model.watchers) {
+    processEntries(model.watchers, ([key, callback]) => {
+      const parts = key.split("|");
+      if (parts.length === 1) {
+        watch(parts[0], callback);
+      } else {
+        watch(parts, callback);
+      }
     });
   }
 
