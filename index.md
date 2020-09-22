@@ -30,7 +30,7 @@ npm install minsto --save
 
 ### Step 1 - Create your store
 
-```jsx harmony
+```jsx
 import minsto from "minsto";
 
 const todoStore = minsto({
