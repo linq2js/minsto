@@ -12,12 +12,8 @@ export default function createSelector(selector, resolver) {
           try {
             const result = selector(...args);
             if (typeof result === "function") {
-              if (typeof resolver.thunk === "function") {
-                lastResult = resolver.thunk(
-                  result,
-                  lastResult,
-                  lastArgs
-                );
+              if (resolver && typeof resolver.thunk === "function") {
+                lastResult = resolver.thunk(result, lastResult, lastArgs);
               } else {
                 lastResult = result(lastResult, lastArgs);
               }
@@ -52,10 +48,10 @@ export default function createSelector(selector, resolver) {
     const selectors = selector
       .slice(0, selector.length - 1)
       .map((s) => createSelector(s, resolver));
-    const wrappedCombiner = createSelector(combiner);
+    const wrappedCombiner = createSelector(combiner, resolver);
     return createSelector(function () {
       return wrappedCombiner(...selectors.map((s) => s(...arguments)));
-    });
+    }, resolver);
   }
 
   if (typeof selector === "object") {
@@ -75,7 +71,7 @@ export default function createSelector(selector, resolver) {
         result[key] = value;
       });
       return hasChange ? (prev = result) : prev;
-    });
+    }, resolver);
   }
 
   throw new Error(

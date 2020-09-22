@@ -14,6 +14,9 @@ export default function isEqual(a, b) {
     Array.isArray(b)
   )
     return false;
+  if (a === null && b) return false;
+  if (b === null && a) return false;
+
   const comparer = (key) => {
     return a[key] === b[key];
   };

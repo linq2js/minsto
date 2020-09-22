@@ -269,4 +269,6 @@ connectReactotronRedux(storeEnhander, counterStore);
 ## Examples
 
 1. [Counter App](https://codesandbox.io/s/minsto-counter-kxem7?file=/src/App.js)
+1. [Counter App using Local Store](https://codesandbox.io/s/minsto-counter-using-local-store-w4u4d?file=/src/App.js)
 1. [Todo App](https://codesandbox.io/s/minsto-todo-app-jbs3s?file=/src/useTodoStore.js)
+1. [Movie Search using Async Computed Prop](https://codesandbox.io/s/minsto-async-computed-prop-3odp6?file=/src/App.js)
