@@ -113,7 +113,7 @@ export default function createStore(model = {}, options = {}) {
 
       const get = () => {
         const sc = selectContext();
-        if (sc) {
+        if (sc || store.__local) {
           if (loading) {
             if (loadingError) throw loadingError;
             throw store.__loadingPromise;
@@ -375,7 +375,7 @@ export default function createStore(model = {}, options = {}) {
         const prop = arguments[0];
         const loadable = loadableOf(prop);
         const sc = selectContext();
-        if (sc) {
+        if (sc || store.__local) {
           if (loadable.hasError) throw loadable.error;
           if (loadable.loading) throw loadable.promise;
         }

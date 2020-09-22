@@ -5,8 +5,9 @@ export default function useLocalStore(model, options) {
   const data = useRef({}).current;
   const [, render] = useState(undefined);
   data.render = render;
-  if (!data.store) {
+  if (!data.store || data.store.__model !== model) {
     data.store = createStore(model, options);
+    data.store.__local = true;
     data.store.onChange(() => {
       if (data.isRendering) {
         data.shouldRerender = true;

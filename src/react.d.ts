@@ -1,4 +1,4 @@
-import { Store, StoreModel } from "./index";
+import { Store, StoreModel, Loadable } from "./index";
 
 export default function useStore<TModel, TResult>(
   store: Store<TModel>,
@@ -23,3 +23,9 @@ export type StoreHookWithSelector<TPayload, TResult> = (
 ) => TResult;
 
 export function useLocalStore<T extends StoreModel>(model: T): Store<T>;
+
+export function useValue<T extends Loadable<any> | any>(
+  value: T
+): ValueInfer<T>;
+
+export type ValueInfer<T> = T extends Loadable<infer TValue> ? TValue : T;

@@ -1,6 +1,6 @@
-import minsto, { Action, StoreModel, Store, InitOptions } from "../index";
-import { createStoreHook } from "../react";
-import { EntitiesStoreModel, ListStoreModel } from "../extras";
+import minsto, { Action, StoreModel, Store, InitOptions } from "../src";
+import { createStoreHook } from "../src/react";
+import { EntitiesStoreModel, ListStoreModel } from "../src/extras";
 
 interface Todo {
   id: number;
