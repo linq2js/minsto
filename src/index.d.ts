@@ -22,7 +22,7 @@ export interface StoreModel {
     [key: string]: Listener<ValueChangeEventArgs<any, any>>;
   };
   isolate?: boolean;
-  onChange?(store?: any): void;
+  onChange?(e: StateChangeEventArgs<any>): void;
   init?(store?: any, options?: InitOptions): any;
   children?: {};
 }
