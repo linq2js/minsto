@@ -28,4 +28,6 @@ export function useValue<T extends Loadable<any> | any>(
   value: T
 ): ValueInfer<T>;
 
+export function createLocalStoreHook<TModel>(model: TModel): StoreHook<TModel>;
+
 export type ValueInfer<T> = T extends Loadable<infer TValue> ? TValue : T;

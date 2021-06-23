@@ -255,6 +255,10 @@ export default function createStore(model = {}, options = {}) {
     });
   }
 
+  if (typeof model.onChange === 'function') {
+    onChange(model.onChange);
+  }
+
   if (model.init) {
     loading = true;
     let isAsync = false;

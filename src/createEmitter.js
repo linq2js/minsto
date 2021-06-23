@@ -7,20 +7,10 @@ export default function createEmitter() {
     if (event in all) {
       return all[event];
     }
-    let modifiedListeners;
-    let workingListeners = [];
+    let listeners = [];
+    let readonlyListeners = listeners;
     let lastPayload;
     let sealed = false;
-    let isEmitting = false;
-
-    function makeImmutableListeners() {
-      if (!isEmitting) return workingListeners;
-
-      if (!modifiedListeners) {
-        modifiedListeners = workingListeners.slice(0);
-      }
-      return modifiedListeners;
-    }
 
     function on(listener) {
       if (sealed) {
@@ -29,37 +19,36 @@ export default function createEmitter() {
       }
       let isActive = true;
 
-      makeImmutableListeners().push(listener);
+      listeners = listeners.concat(listener);
 
       return () => {
         if (!isActive) {
           return;
         }
         isActive = false;
-        const immutableListeners = makeImmutableListeners();
-        const index = immutableListeners.indexOf(listener);
-        index !== -1 && immutableListeners.splice(index, 1);
+        const index = listeners.indexOf(listener);
+        if (index !== -1) {
+          if (listeners === readonlyListeners) {
+            listeners = listeners.slice();
+          }
+          listeners.splice(index, 1);
+        }
       };
     }
 
     function length() {
-      return getListeners().length;
-    }
-
-    function getListeners() {
-      return modifiedListeners || workingListeners;
+      return listeners.length;
     }
 
     function notify(payload) {
       try {
-        isEmitting = true;
-        // update listeners
-        if (modifiedListeners) {
-          workingListeners = modifiedListeners;
+        const tempListeners = (readonlyListeners = listeners);
+        const length = tempListeners.length;
+        for (let i = 0; i < length; i++) {
+          tempListeners[i](payload);
         }
-        workingListeners.forEach((listener) => listener(payload));
       } finally {
-        isEmitting = false;
+        readonlyListeners = listeners;
       }
     }
 
@@ -69,12 +58,7 @@ export default function createEmitter() {
     }
 
     function clear() {
-      if (isEmitting) {
-        makeImmutableListeners().length = 0;
-      } else {
-        if (modifiedListeners) modifiedListeners.length = 0;
-        workingListeners.length = 0;
-      }
+      listeners = [];
     }
 
     function once(listener) {
